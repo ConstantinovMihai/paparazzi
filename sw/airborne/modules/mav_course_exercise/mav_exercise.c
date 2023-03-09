@@ -37,17 +37,17 @@ uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 enum navigation_state_t {
   SAFE,
   OBSTACLE_FOUND,
+  SEARCH_SAFE_HEADING,
   OUT_OF_BOUNDS,
-  HOLD
 };
 
 // define and initialise global variables
 float oa_color_count_frac = 0.18f;
-enum navigation_state_t navigation_state = SAFE;
+enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float moveDistance = 2;                 // waypoint displacement [m]
-float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
+float moveDistance = 0.6;                 // waypoint displacement [m]
+float oob_heading_increment = 10.f;      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
 
@@ -93,7 +93,7 @@ void mav_exercise_periodic(void) {
 
   switch (navigation_state) {
     case SAFE:
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+      moveWaypointForward(WP_TRAJECTORY, 1.9f * moveDistance);
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         navigation_state = OUT_OF_BOUNDS;
       } else if (obstacle_free_confidence == 0) {
@@ -108,26 +108,34 @@ void mav_exercise_periodic(void) {
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
 
-      navigation_state = HOLD;
+      navigation_state = SEARCH_SAFE_HEADING;
       break;
+    case SEARCH_SAFE_HEADING:
+      increase_nav_heading(oob_heading_increment);
+    
+      if (obstacle_free_confidence >= 3){
+        navigation_state = SAFE;
+      }
+      break; 
     case OUT_OF_BOUNDS:
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
 
-      increase_nav_heading(oob_haeding_increment);
-      moveWaypointForward(WP_TRAJECTORY, 1.5f);
+      increase_nav_heading(oob_heading_increment);
+      moveWaypointForward(WP_TRAJECTORY, 2.1f);
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         // add offset to head back into arena
-        increase_nav_heading(oob_haeding_increment);
-        navigation_state = SAFE;
+        increase_nav_heading(oob_heading_increment);
+        obstacle_free_confidence = 0;
+        navigation_state = SEARCH_SAFE_HEADING;
       }
       break;
-    case HOLD:
     default:
       break;
   }
+  return;
 }
 
 /*

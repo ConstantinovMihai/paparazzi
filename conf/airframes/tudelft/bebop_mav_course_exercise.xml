@@ -57,6 +57,7 @@
       <define name="CV_AE_AWB_AV" value="1" />
       <define name="CV_AE_AWB_VERBOSE" value="0" />
     </module-->
+    <module name="mav_course_exercise"/>
     <module name="video_capture">
       <define name="VIDEO_CAPTURE_CAMERA" value="front_camera"/>
       <define name="VIDEO_CAPTURE_FPS" value="10"/>

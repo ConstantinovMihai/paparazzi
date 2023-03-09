@@ -11,10 +11,17 @@
   </dep>
   <!-- TODO Specify header, init, periodic, makefile sections  -->
   <header>
+<<<<<<< Updated upstream
     <file name="mav_exercise.h"/>
   </header>
   <init fun="mav_exercise_init()"/>
   <periodic fun="mav_exercise_periodic()" freq="6"/>
+=======
+    <file name= "mav_exercise.h"/>	
+  </header>
+  <init fun="mav_exercise_init()"/>
+  <periodic fun="mav_exercise_periodic()" freq="4"/>
+>>>>>>> Stashed changes
   <makefile target="ap|nps">
     <file name="mav_exercise.c"/>
   </makefile>

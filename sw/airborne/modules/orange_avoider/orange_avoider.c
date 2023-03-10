@@ -56,9 +56,10 @@ float oa_color_count_frac = 0.18f;
 // define and initialise global variables
 enum navigation_state_t navigation_state = SEARCH_FOR_SAFE_HEADING;
 int32_t color_count = 0;                // orange color count from color filter for obstacle detection
+// int32_t no_orange_constant = 10000;     // constant substracted from color_count_threshold to symbolize no orange
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float heading_increment = 10.f;          // heading angle increment [deg]
-float maxDistance = 0.6;               // max waypoint displacement [m]
+float heading_increment = 15.f;          // heading angle increment [deg]
+float maxDistance = 1.2;               // max waypoint displacement [m]
 
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -146,14 +147,30 @@ void orange_avoider_periodic(void)
 
       break;
     case SEARCH_FOR_SAFE_HEADING:
-      increase_nav_heading(heading_increment);
+      // stop
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
 
+      increase_nav_heading(heading_increment);
+/*
+      if (color_count > color_count_threshold && color_count < 20000){
+        // Right of the object, so turn CW:
+        increase_nav_heading(heading_increment);
+      }
+      else{
+        increase_nav_heading(0.f);
+      }
+*/
       // make sure we have a couple of good readings before declaring the way safe
       if (obstacle_free_confidence >= 3){
         navigation_state = SAFE;
       }
       break;
     case OUT_OF_BOUNDS:
+      // stop
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
+
       increase_nav_heading(heading_increment);
       moveWaypointForward(WP_TRAJECTORY, 2.1f);
 

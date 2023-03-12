@@ -47,7 +47,7 @@ float oa_color_count_frac = 0.18f;
 enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 float divergence_size = 0;             // divergence size from optical flow
-float divergence_threshold = 0.003;      // threshold for the divergence value for optical flow object detection
+float divergence_threshold = 0.005;      // threshold for the divergence value for optical flow object detection
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
 float moveDistance = 0.6;                 // waypoint displacement [m]
 float oob_heading_increment = 10.f;      // heading angle increment if out of bounds [deg]
@@ -114,7 +114,6 @@ void mav_exercise_periodic(void) {
   PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
   PRINT("Divergence size: %lf Divergence threshold: %lf \n", divergence_size, divergence_threshold); // Print optical flow divergence size
 
-
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   // Update our safe confidence using color threshold
   if (color_count < color_count_threshold) {
@@ -132,9 +131,13 @@ void mav_exercise_periodic(void) {
       moveWaypointForward(WP_TRAJECTORY, 1.9f * moveDistance);
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0 && divergence_size > divergence_threshold) {
+      } //else if (obstacle_free_confidence == 0 && divergence_size > divergence_threshold) {
+        //navigation_state = OBSTACLE_FOUND;
+      //} 
+      else if (divergence_size > divergence_threshold) {
         navigation_state = OBSTACLE_FOUND;
-      } else {
+      } 
+      else {
         moveWaypointForward(WP_GOAL, moveDistance);
       }
       break;
@@ -148,7 +151,10 @@ void mav_exercise_periodic(void) {
     case SEARCH_SAFE_HEADING:
       increase_nav_heading(oob_heading_increment);
     
-      if (obstacle_free_confidence >= 3){
+      // if (obstacle_free_confidence >= 3){
+      //   navigation_state = SAFE;
+      // }
+      if (divergence_size < divergence_threshold){
         navigation_state = SAFE;
       }
       break; 

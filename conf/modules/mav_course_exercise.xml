@@ -14,7 +14,7 @@
     <file name="mav_exercise.h"/>
   </header>
   <init fun="mav_exercise_init()"/>
-  <periodic fun="mav_exercise_periodic()" freq="6"/>
+  <periodic fun="mav_exercise_periodic()" freq="8"/>
   <makefile target="ap|nps">
     <file name="mav_exercise.c"/>
   </makefile>

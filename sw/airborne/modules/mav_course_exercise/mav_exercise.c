@@ -49,14 +49,14 @@ float oa_color_count_frac = 0.18f;
 enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING_ORANGE;
 int orange_detection = 0;                                // used for debugging, 0=not detected, 1=detected
 int opticalflow_detection = 0;                           // used for debugging, 0=not detected, 1=detected
-int out_of_bounds_detection = 0;                           // used for debugging, 0=not detected, 1=detected
+int out_of_bounds_detection = 0;                         // used for debugging, 0=not detected, 1=detected
 int32_t color_count = 0;                                 // orange color count from color filter for obstacle detection
 float div_size = 0;                                      // divergence size from optical flow
-float divergence_threshold = 0.005;                       // threshold for the divergence value for optical flow object detection
+float divergence_threshold = 0.007;                      // threshold for the divergence value for optical flow object detection
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow
-float moveDistance = 0.6;                                // waypoint displacement [m]
-float oob_heading_increment = 10.f;                      // heading angle increment if out of bounds [deg]
+float moveDistance = 0.8;                                // waypoint displacement [m]
+float oob_heading_increment = 12.f;                      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free
 const int16_t max_trajectory_confidence_opticalflow = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -133,7 +133,7 @@ void mav_exercise_periodic(void) {
   if (div_size < divergence_threshold) {
     obstacle_free_confidence_opticalflow++;
   } else {
-    obstacle_free_confidence_opticalflow -= 3;  // be more cautious with positive obstacle detections
+    obstacle_free_confidence_opticalflow -= 2;  // be more cautious with positive obstacle detections
   }
 
   // Bound obstacle_free_confidence_orange
@@ -194,7 +194,7 @@ void mav_exercise_periodic(void) {
 
       increase_nav_heading(oob_heading_increment);
     
-      if (obstacle_free_confidence_opticalflow >= 4){
+      if (obstacle_free_confidence_opticalflow >= 5){
         navigation_state = SAFE;
       }
       break; 

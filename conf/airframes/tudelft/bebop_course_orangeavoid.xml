@@ -87,7 +87,7 @@
     </module>
     <module name="cv_opticflow">
       <define name="OPTICFLOW_CAMERA" value="front_camera"/>
-      <define name="MAX_HORIZON" value="65"/>
+      <define name="MAX_HORIZON" value="50"/>
       <define name="OPTICFLOW_MAX_TRACK_CORNERS" value="10"/>
       <define name="OPTICFLOW_SUBPIXEL_FACTOR" value="200"/>
       <define name="OPTICFLOW_CORNER_METHOD" value="0"/>

@@ -82,7 +82,7 @@ int32_t color_count = 0;                                 // orange color count f
 float oa_color_count_frac = 0.18f;
 
 float div_size = 0;                                      // divergence size from optical flow for obstacle detection
-float divergence_threshold = 0.007;                      // threshold for the divergence value for optical flow object detection
+float divergence_threshold = 0.025;                      // threshold for the divergence value for optical flow object detection
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow

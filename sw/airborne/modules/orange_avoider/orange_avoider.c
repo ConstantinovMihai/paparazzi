@@ -174,7 +174,7 @@ void orange_avoider_periodic(void)
   // Average out flow_x values using a moving average filter, x is new value, y is old value
   uint32_t moving_average_filter(uint32_t x, uint32_t y)
   {
-    return ((0.4*x) + (1-0.4)*y);
+    return ((0.3*x) + (1-0.3)*y);
   }
 
   flow_vector_x = moving_average_filter(flow_vector_x_new, flow_vector_x);
@@ -251,9 +251,9 @@ void orange_avoider_periodic(void)
       guidance_h_set_body_vel(0, 0);
 
       // Heading selection based on approach to object
-      if (flow_vector_x > 0) {
+      if (flow_vector_x > 10) {
         increase_nav_heading(heading_increment); // If approaching object from left, turn CW
-      } else if (flow_vector_x < 0) {
+      } else if (flow_vector_x < -10) {
         increase_nav_heading(neg_heading_increment); // If approaching object from right, turn CCW
       } else {
         increase_nav_heading(heading_increment); // If approaching object from straight, turn CW
@@ -270,9 +270,9 @@ void orange_avoider_periodic(void)
       guidance_h_set_body_vel(0, 0);
 
       // Heading selection based on approach to object
-      if (flow_vector_x > 0) {
+      if (flow_vector_x > 10) {
         increase_nav_heading(heading_increment); // If approaching object from left, turn CW
-      } else if (flow_vector_x < 0) {
+      } else if (flow_vector_x < -10) {
         increase_nav_heading(neg_heading_increment); // If approaching object from right, turn CCW
       } else {
         increase_nav_heading(heading_increment); // If approaching object from straight, turn CW

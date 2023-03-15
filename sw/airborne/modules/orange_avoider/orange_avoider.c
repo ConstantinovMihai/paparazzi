@@ -82,7 +82,7 @@ int32_t color_count = 0;                                 // orange color count f
 float oa_color_count_frac = 0.18f;
 
 float div_size = 0;                                      // divergence size from optical flow for obstacle detection
-float divergence_threshold = 0.007;                      // threshold for the divergence value for optical flow object detection
+float divergence_threshold = 0.015;                      // threshold for the divergence value for optical flow object detection
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow
@@ -216,22 +216,25 @@ void orange_avoider_periodic(void)
       break;
     case OBSTACLE_FOUND_ORANGE:
       // Stop
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // waypoint_move_here_2d(WP_GOAL);
+      // waypoint_move_here_2d(WP_TRAJECTORY);
+      guidance_h_set_body_vel(0, 0);
 
       navigation_state = SEARCH_SAFE_HEADING_ORANGE;
       break;
     case OBSTACLE_FOUND_OPTICALFLOW:
       // Stop
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // waypoint_move_here_2d(WP_GOAL);
+      // waypoint_move_here_2d(WP_TRAJECTORY);
+      guidance_h_set_body_vel(0, 0);
 
       navigation_state = SEARCH_SAFE_HEADING_OPTICALFLOW;
       break;
     case SEARCH_SAFE_HEADING_ORANGE:
       // Stop
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // waypoint_move_here_2d(WP_GOAL);
+      // waypoint_move_here_2d(WP_TRAJECTORY);
+      guidance_h_set_body_vel(0, 0);
 
       increase_nav_heading(heading_increment);
     
@@ -242,7 +245,9 @@ void orange_avoider_periodic(void)
     case SEARCH_SAFE_HEADING_OPTICALFLOW:
       // Stop
       waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // waypoint_move_here_2d(WP_GOAL);
+      // waypoint_move_here_2d(WP_TRAJECTORY);
+      guidance_h_set_body_vel(0, 0);
 
       increase_nav_heading(heading_increment);
     
@@ -252,8 +257,9 @@ void orange_avoider_periodic(void)
       break; 
     case OUT_OF_BOUNDS:
       // Stop
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // waypoint_move_here_2d(WP_GOAL);
+      // waypoint_move_here_2d(WP_TRAJECTORY);
+      guidance_h_set_body_vel(0, 0);
 
       increase_nav_heading(heading_increment);
       moveWaypointForward(WP_TRAJECTORY, 2.1f);

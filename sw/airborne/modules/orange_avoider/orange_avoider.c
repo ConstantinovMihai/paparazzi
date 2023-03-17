@@ -29,7 +29,7 @@
  *
  * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
  * (given by color_count_frac) we assume that there is an obstacle and we turn. The same principle is applied but then 
- * using the divergence value (div_size) and the divergence threshold (divergence_threshold).
+ * using the divergence difference value between left and right of image (div_size_mean_difference) and the divergence threshold (divergence_threshold).
  *
  */
 
@@ -81,7 +81,7 @@ int out_of_bounds_detection = 0;                         // used for debugging, 
 int32_t color_count = 0;                                 // orange color count from color filter for obstacle detection
 float oa_color_count_frac = 0.18f;
 
-float div_size = 0;                                      // divergence size from optical flow for obstacle detection
+float div_size_mean_difference = 0.f;                                      // divergence size from optical flow for obstacle detection
 float divergence_threshold = 0.015;                      // threshold for the divergence value for optical flow object detection
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
@@ -129,15 +129,14 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
 static abi_event optical_flow_ev;
 static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             uint32_t __attribute__((unused)) stamp, 
-                            int32_t flow_x,
+                            int32_t __attribute__((unused)) flow_x,
                             int32_t __attribute__((unused)) flow_y,
                             int32_t __attribute__((unused)) flow_der_x,
                             int32_t __attribute__((unused)) flow_der_y,
                             float __attribute__((unused)) quality, 
                             float size_divergence) 
 {
-  flow_vector_x_new = flow_x;
-  div_size = size_divergence;
+  div_size_mean_difference = size_divergence;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,7 +180,7 @@ void orange_avoider_periodic(void)
 
   ////// PRINT DETECTION VALUES //////
   //VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
-  //VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %lf \n", div_size, divergence_threshold); // Print optical flow divergence size
+  //VERBOSE_PRINT("Divergence size mean difference: %lf Divergence threshold: %lf \n", div_size_mean_difference, divergence_threshold); // Print optical flow divergence size
   VERBOSE_PRINT("Optical Flow Detection: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic: %d Obstacle Free Orange: %d \n", opticalflow_detection, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow, obstacle_free_confidence_orange); // Print optical flow and orange detection
   VERBOSE_PRINT("Flow vector x: %d \n", flow_vector_x);
 
@@ -192,7 +191,7 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
 
-  if (div_size < divergence_threshold) {
+  if (div_size_mean_difference < divergence_threshold) {
     obstacle_free_confidence_opticalflow++;
   } else {
     obstacle_free_confidence_opticalflow -= 2; // Be more cautious with positive obstacle detections

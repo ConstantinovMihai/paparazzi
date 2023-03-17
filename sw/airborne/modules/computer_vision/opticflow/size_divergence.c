@@ -30,6 +30,7 @@
  */
 
 #include "size_divergence.h"
+#include "firmwares/rotorcraft/navigation.h"
 #include <stdlib.h>
 
 /**
@@ -115,7 +116,7 @@
 //   return divs_sum / used_samples;
 // }
 
-float get_size_divergence_improved(struct flow_t *vectors, int count, int n_samples)
+float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 {
   float distance_1, distance_2;
   float divs_sum_left = 0.f;       // Divergence in left part of image
@@ -164,7 +165,6 @@ float get_size_divergence_improved(struct flow_t *vectors, int count, int n_samp
           divs_sum_right += (distance_2 - distance_1) / distance_1; // Right part of image considered
           used_samples_right++;
         }
-
       }
     }
   } else {
@@ -175,8 +175,7 @@ float get_size_divergence_improved(struct flow_t *vectors, int count, int n_samp
       j = rand() % count;
       // ensure it is not the same index:
       while (i == j) {
-        j = rand() % count;
-      }
+        j = rand() % count; 
 
       // distance in previous image:
       dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
@@ -195,12 +194,12 @@ float get_size_divergence_improved(struct flow_t *vectors, int count, int n_samp
       if ((float)vectors[i].pos.x < image_width_half) {
         divs_sum_left += (distance_2 - distance_1) / distance_1; // Left part of image considered
         used_samples_left++;
-      }
+      } 
       else {          
         divs_sum_right += (distance_2 - distance_1) / distance_1; // Right part of image considered
         used_samples_right++;
-      }      
-      
+      }       
+     }
     }
   }
 
@@ -208,10 +207,10 @@ float get_size_divergence_improved(struct flow_t *vectors, int count, int n_samp
     return 0.f;
   }
 
-  divs_sum_left_mean = divs_sum_left / used_samples_left;
-  divs_sum_right_mean = divs_sum_right / used_samples_right;
+  // divs_sum_left_mean = divs_sum_left / used_samples_left;
+  // divs_sum_right_mean = divs_sum_right / used_samples_right;
 
-  divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
+  divs_sum_difference = divs_sum_left - divs_sum_right;
 
   // Return the calculated mean divergence difference between left and right of image:
   return divs_sum_difference;

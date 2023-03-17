@@ -230,24 +230,18 @@ void orange_avoider_periodic(void)
       break;
     case OBSTACLE_FOUND_ORANGE:
       // Stop
-      // waypoint_move_here_2d(WP_GOAL);
-      // waypoint_move_here_2d(WP_TRAJECTORY);
       guidance_h_set_body_vel(0, 0);
 
       navigation_state = SEARCH_SAFE_HEADING_ORANGE;
       break;
     case OBSTACLE_FOUND_OPTICALFLOW:
       // Stop
-      // waypoint_move_here_2d(WP_GOAL);
-      // waypoint_move_here_2d(WP_TRAJECTORY);
       guidance_h_set_body_vel(0, 0);
 
       navigation_state = SEARCH_SAFE_HEADING_OPTICALFLOW;
       break;
     case SEARCH_SAFE_HEADING_ORANGE:
       // Stop
-      // waypoint_move_here_2d(WP_GOAL);
-      // waypoint_move_here_2d(WP_TRAJECTORY);
       guidance_h_set_body_vel(0, 0);
 
       // Heading selection based on approach to object
@@ -265,8 +259,6 @@ void orange_avoider_periodic(void)
       break; 
     case SEARCH_SAFE_HEADING_OPTICALFLOW:
       // Stop
-      // waypoint_move_here_2d(WP_GOAL);
-      // waypoint_move_here_2d(WP_TRAJECTORY);
       guidance_h_set_body_vel(0, 0);
 
       // Heading selection based on approach to object
@@ -284,8 +276,6 @@ void orange_avoider_periodic(void)
       break; 
     case OUT_OF_BOUNDS:
       // Stop
-      // waypoint_move_here_2d(WP_GOAL);
-      // waypoint_move_here_2d(WP_TRAJECTORY);
       guidance_h_set_body_vel(0, 0);
 
       increase_nav_heading(heading_increment);

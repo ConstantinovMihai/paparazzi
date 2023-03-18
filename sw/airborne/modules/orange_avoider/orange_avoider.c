@@ -80,7 +80,8 @@ enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING_ORANGE;
 int orange_detection = 0;                                // used for debugging, 0=not detected, 1=detected
 int opticalflow_detection_right = 0;                     // used for debugging, 0=not detected, 1=detected
 int opticalflow_detection_left = 0;                      // used for debugging, 0=not detected, 1=detected
-int opticalflow_detection_equal = 0;                     // used for debugging, 0=not true, 1=true
+int opticalflow_detection_Zero = 0;                      // triggers detection when divergence difference is 0
+int32_t opticalflow_detection_counter_Zero = 0;          // counter for when divergence difference is 0
 int out_of_bounds_detection = 0;                         // used for debugging, 0=not detected, 1=detected
 
 int32_t color_count = 0;                                 // orange color count from color filter for obstacle detection
@@ -189,7 +190,7 @@ void orange_avoider_periodic(void)
   ////// PRINT DETECTION VALUES //////
   //VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
   VERBOSE_PRINT("Divergence size difference: %lf Divergence threshold: %d \n", div_size_difference_mean, divergence_difference_threshold); // Print optical flow divergence size
-  // VERBOSE_PRINT("Optical Flow Detection Right: %d Optical Flow Detection Left: %d Optical Flow Detection EQUAL: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic Right: %d Obstacle Free Optic Left: %d Obstacle Free Orange: %d \n", opticalflow_detection_right, opticalflow_detection_left, opticalflow_detection_equal, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow_right, obstacle_free_confidence_opticalflow_left, obstacle_free_confidence_orange); // Print optical flow and orange detection
+  //VERBOSE_PRINT("Optical Flow Detection Right: %d Optical Flow Detection Left: %d Optical Flow Detection Zero: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic Right: %d Obstacle Free Optic Left: %d Obstacle Free Orange: %d \n", opticalflow_detection_right, opticalflow_detection_left, opticalflow_detection_Zero, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow_right, obstacle_free_confidence_opticalflow_left, obstacle_free_confidence_orange); // Print optical flow and orange detection
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   if (color_count < color_count_threshold) {
@@ -205,7 +206,13 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_opticalflow_left -= 2;                           // Object detected on left, be more cautious with positive detections
     obstacle_free_confidence_opticalflow_right++;                             // No obstacle on right, so obstacle free confidence increases
   } else {
-    opticalflow_detection_equal = 1;
+    opticalflow_detection_counter_Zero++;
+  }
+
+  if (opticalflow_detection_counter_Zero >= 10) {
+    opticalflow_detection_Zero = 1;
+  } else {
+    opticalflow_detection_Zero = 0;
   }
 
   // Bound obstacle_free_confidence_orange
@@ -234,8 +241,7 @@ void orange_avoider_periodic(void)
   } else if (moveDistance_temp3 < moveDistance_temp2) {
     moveDistance = moveDistance_temp3;  
   } else {
-    moveDistance = maxDistance;          opticalflow_detection_equal = 0;
-
+    moveDistance = maxDistance;         
   }
 
   ////// NAVIGATION STATE MACHINE //////
@@ -254,7 +260,7 @@ void orange_avoider_periodic(void)
       } else if (obstacle_free_confidence_opticalflow_left == 0) {
           navigation_state = OBSTACLE_FOUND_OPTICALFLOW_LEFT;
           opticalflow_detection_left = 1;
-      } else if (opticalflow_detection_equal == 1) {
+      } else if (opticalflow_detection_Zero == 1) {
           navigation_state = TURN_AROUND;
       } else {
           orange_detection = 0;
@@ -311,8 +317,9 @@ void orange_avoider_periodic(void)
       }
       break;
     case TURN_AROUND:
-      increase_nav_heading(heading_increment_TurnAround);                       // Turn around by 180 [deg] if unsure about divergence
-      opticalflow_detection_equal = 0;
+      increase_nav_heading(1.f);                       // Turn around by 180 [deg] if unsure about divergence
+      opticalflow_detection_Zero = 0;
+      opticalflow_detection_counter_Zero = 0;
       navigation_state = SAFE;
       break;
     case OUT_OF_BOUNDS:

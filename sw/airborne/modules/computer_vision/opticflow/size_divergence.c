@@ -120,12 +120,13 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 {
   float distance_1, distance_2;
   float divs_sum_left = 0.f;       // Divergence in left part of image
-  float divs_sum_left_mean = 0.f;  // Mean divergence in left part of image
+  //float divs_sum_left_mean = 0.f;  // Mean divergence in left part of image
   float divs_sum_right = 0.f;      // Divergence in right part of image
-  float divs_sum_right_mean = 0.f; // Mean divergence in right part of image
+  //float divs_sum_right_mean = 0.f; // Mean divergence in right part of image
   float divs_sum_difference = 0.f; // Difference in divergence used to determine which side has the larger divergence
-  uint32_t used_samples_left = 0;
-  uint32_t used_samples_right = 0;
+  uint32_t used_samples = 0;
+  //uint32_t used_samples_left = 0;
+  //uint32_t used_samples_right = 0;
   float dx, dy;
   int32_t i, j;
   int32_t image_width_half = front_camera.output_size.w/2; // Width of captured image (maybe needs a header file)
@@ -159,12 +160,13 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 
         if ((float)vectors[i].pos.x < image_width_half) {
           divs_sum_left += (distance_2 - distance_1) / distance_1; // Left part of image considered
-          used_samples_left++;
+          //used_samples_left++;
         }
         else {
           divs_sum_right += (distance_2 - distance_1) / distance_1; // Right part of image considered
-          used_samples_right++;
+          //used_samples_right++;
         }
+        used_samples++;
       }
     }
   } else {
@@ -193,25 +195,24 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 
       if ((float)vectors[i].pos.x < image_width_half) {
         divs_sum_left += (distance_2 - distance_1) / distance_1; // Left part of image considered
-        used_samples_left++;
+        // used_samples_left++;
       } 
       else {          
         divs_sum_right += (distance_2 - distance_1) / distance_1; // Right part of image considered
-        used_samples_right++;
-      }       
+        // used_samples_right++;
+      }
+      used_samples++;       
      }
     }
   }
 
-  if (used_samples_left < 1 && used_samples_right < 1){
+  if (used_samples < 1){
     return 0.f;
   }
 
   // divs_sum_left_mean = divs_sum_left / used_samples_left;
   // divs_sum_right_mean = divs_sum_right / used_samples_right;
 
-  divs_sum_difference = divs_sum_left - divs_sum_right;
-
   // Return the calculated mean divergence difference between left and right of image:
-  return divs_sum_difference;
+  return divs_sum_difference = (divs_sum_left - divs_sum_right) / max_samples;
 }

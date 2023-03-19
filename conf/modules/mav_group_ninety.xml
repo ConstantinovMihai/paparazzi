@@ -1,0 +1,16 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module>
+  <doc>
+    <description>
+      MAV Group 90 module
+    </description>
+  </doc>
+  <header>
+    <file name="mav_group_ninety.h"/>
+  </header>
+  <init fun="mav_group_ninety_init()"/>
+  <periodic fun="mav_group_ninety_periodic()" frequency="10"/>
+  <makefile target="ap">
+    <file name="mav_group_ninety.c"/>
+  </makefile>

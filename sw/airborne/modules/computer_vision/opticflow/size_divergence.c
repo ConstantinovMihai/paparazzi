@@ -39,78 +39,151 @@
  * @param[in] n_samples  The number of line segments that will be taken into account. 0 means all line segments will be considered.
  * @return divergence
  */
+
 float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 {
-  float distance_1, distance_2;
-  float divs_sum = 0.f;
-  uint32_t used_samples = 0;
-  float dx, dy;
-  int32_t i, j;
+    float distance_1, distance_2;
+    float divs_sum = 0.f;
+    uint32_t used_samples = 0;
+    float dx, dy;
+    int32_t i, j;
 
-  int32_t max_samples = (count * count - count) / 2;
+    int32_t max_samples = (count * count - count) / 2;
 
-  if (count < 2) {
-    return 0.f;
-  } else if (count >= max_samples) {
-    n_samples = 0;
-  }
+    if (count < 2) {
+        return 0.f;
+    } else if (count >= max_samples) {
+        n_samples = 0;
+    }
 
-  if (n_samples == 0) {
-    // go through all possible lines:
-    for (i = 0; i < count; i++) {
-      for (j = i + 1; j < count; j++) {
-        // distance in previous image:
-        dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
-        dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
-        distance_1 = sqrtf(dx * dx + dy * dy);
+    if (n_samples == 0) {
+        // go through all possible lines:
+        for (i = 0; i < count; i++) {
+            for (j = i + 1; j < count; j++) {
+                // distance in previous image:
+                dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
+                dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
+                distance_1 = sqrtf(dx * dx + dy * dy);
 
-        if (distance_1 < 1E-5) {
-          continue;
+                if (distance_1 < 1E-5) {
+                    continue;
+                }
+
+                // distance in current image:
+                dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
+                dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
+                distance_2 = sqrtf(dx * dx + dy * dy);
+
+                divs_sum += (distance_2 - distance_1) / distance_1;
+                used_samples++;
+            }
         }
+    } else {
+        // take random samples:
+        for (uint16_t sample = 0; sample < n_samples; sample++) {
+            // take two random indices:
+            i = rand() % count;
+            j = rand() % count;
+            // ensure it is not the same index:
+            while (i == j) {
+                j = rand() % count;
+            }
 
-        // distance in current image:
-        dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
-        dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
-        distance_2 = sqrtf(dx * dx + dy * dy);
+            // distance in previous image:
+            dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
+            dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
+            distance_1 = sqrtf(dx * dx + dy * dy);
 
-        divs_sum += (distance_2 - distance_1) / distance_1;
-        used_samples++;
-      }
+            if (distance_1 < 1E-5) {
+                continue;
+            }
+
+            // distance in current image:
+            dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
+            dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
+            distance_2 = sqrtf(dx * dx + dy * dy);
+
+            divs_sum += (distance_2 - distance_1) / distance_1;
+            used_samples++;
+        }
     }
-  } else {
-    // take random samples:
-    for (uint16_t sample = 0; sample < n_samples; sample++) {
-      // take two random indices:
-      i = rand() % count;
-      j = rand() % count;
-      // ensure it is not the same index:
-      while (i == j) {
-        j = rand() % count;
-      }
 
-      // distance in previous image:
-      dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
-      dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
-      distance_1 = sqrtf(dx * dx + dy * dy);
-
-      if (distance_1 < 1E-5) {
-        continue;
-      }
-
-      // distance in current image:
-      dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
-      dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
-      distance_2 = sqrtf(dx * dx + dy * dy);
-
-      divs_sum += (distance_2 - distance_1) / distance_1;
-      used_samples++;
+    if (used_samples < 1){
+        return 0.f;
     }
-  }
 
-  if (used_samples < 1){
-    return 0.f;
-  }
+    // return the calculated mean divergence:
+    return divs_sum / used_samples;
+}
 
-  // return the calculated mean divergence:
-  return divs_sum / used_samples;
+// TODO: test this function, and send an ABI message to the Navigator to make decision based on the divergence difference
+float get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
+{
+    // computes the difference between the normalised divergence on the left and right sides of the image
+    // the two normalisations are:
+    // 1. normalise for the linear expansion of optic flow vectors situated further from the center of the image
+    // 2. normalise for the amount of optic flow vectors on each half of the image
+
+    float flow_norm;
+    float coeff_norm;                // normalisation coefficient
+
+    float divs_sum_left = 0.f;       // Divergence in left part of image
+    float divs_sum_left_mean = 0.f;  // Mean divergence in left part of image
+    float divs_sum_right = 0.f;      // Divergence in right part of image
+    float divs_sum_right_mean = 0.f; // Mean divergence in right part of image
+    float divs_sum_difference = 0.f; // Difference in divergence used to determine which side has the larger divergence
+    uint32_t used_samples = 0;
+    uint32_t used_samples_left = 0;
+    uint32_t used_samples_right = 0;
+    float dx, dy;
+    int32_t i, j;
+    int32_t image_width_half = front_camera.output_size.w/2; // Width of captured image (maybe needs a header file)
+    // TODO: get how to obtain image_height_half from front camera output
+    int32_t image_height_half = 120;
+
+    if (count < 2) {
+        return 0.f;
+    } else if (count >= max_samples) {
+        n_samples = 0;
+    }
+
+    // apply the random consensus method if n_samples != 0
+    // TODO: apply random consensus method
+    if (n_samples == 0) {
+        for (i = 0; i < count; i++) {
+            // distance in previous image:
+            dx = (float) vectors[i].pos.x - (float) vectors[j].pos.x;
+            dy = (float) vectors[i].pos.y - (float) vectors[j].pos.y;
+
+            // this is the linear normalisation coefficient
+            coeff_norm = sqrtf(
+                    ((float) vectors[i].pos.x - image_width_half) * ((float) vectors[i].pos.x - image_width_half) +
+                    ((float) vectors[i].pos.y - image_height_half) * ((float) vectors[i].pos.y - image_height_half));
+            // compute the norm of the flow vector and normalise it (normalisation 1)
+            flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
+
+            // decide whether the optic flow vector is on the left or on the right
+            if ((float) vectors[i].pos.x < image_width_half) {
+                divs_sum_left += flow_norm; // Left part of image considered
+                used_samples_left++;
+            } else {
+                divs_sum_right += flow_norm; // Right part of image considered
+                used_samples_right++;
+            }
+            used_samples++;
+        }
+    }
+
+    if (used_samples < 1){
+        return 0.f;
+    }
+
+    // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
+    divs_sum_left_mean = divs_sum_left / used_samples_left;
+    divs_sum_right_mean = divs_sum_right / used_samples_right;
+
+    divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean
+
+    // Return the calculated mean divergence difference between left and right of image:
+    return divs_sum_difference;
 }

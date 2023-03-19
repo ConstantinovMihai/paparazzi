@@ -137,15 +137,10 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     uint32_t used_samples_right = 0;
     float dx, dy;
     int32_t i, j;
-    int32_t image_width_half = front_camera.output_size.w/2; // Width of captured image (maybe needs a header file)
+    int32_t image_width_half = 260; // Width of captured image (maybe needs a header file)
     // TODO: get how to obtain image_height_half from front camera output
     int32_t image_height_half = 120;
 
-    if (count < 2) {
-        return 0.f;
-    } else if (count >= max_samples) {
-        n_samples = 0;
-    }
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
@@ -182,8 +177,9 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     divs_sum_left_mean = divs_sum_left / used_samples_left;
     divs_sum_right_mean = divs_sum_right / used_samples_right;
 
-    divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean
+    divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
     // Return the calculated mean divergence difference between left and right of image:
+    divs_sum_difference = rand(); // TODO: remove this line after debugging
     return divs_sum_difference;
 }

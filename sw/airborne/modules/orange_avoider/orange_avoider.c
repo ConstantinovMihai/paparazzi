@@ -84,6 +84,8 @@ float oa_color_count_frac = 0.18f;
 float div_size = 0;                                      // divergence size from optical flow for obstacle detection
 float divergence_threshold = 0.015;                      // threshold for the divergence value for optical flow object detection
 
+float div_diff = 0;                                      // difference in the divergence computed in both halves of the screen
+
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free for orange detection
@@ -130,9 +132,11 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             int32_t __attribute__((unused)) flow_der_x,
                             int32_t __attribute__((unused)) flow_der_y,
                             float __attribute__((unused)) quality, 
-                            float size_divergence) 
+                            float size_divergence,
+                            float diff_divergence)
 {
   div_size = size_divergence;
+  div_diff = diff_divergence;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -168,10 +172,13 @@ void orange_avoider_periodic(void)
 
   ////// PRINT DETECTION VALUES //////
   //VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
-  //VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %lf \n", div_size, divergence_threshold); // Print optical flow divergence size
+  VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %lf \n", div_size, divergence_threshold); // Print optical flow divergence size
+  VERBOSE_PRINT("Divergence difference: %lf Divergence threshold: %lf \n", div_diff, divergence_threshold); // Print optical flow divergence difference
+
   VERBOSE_PRINT("Optical Flow Detection: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic: %d Obstacle Free Orange: %d \n", opticalflow_detection, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow, obstacle_free_confidence_orange); // Print optical flow and orange detection
-  
-  ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
+  PRINT("div_diff difference: %f \n", div_diff);
+
+    ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   if (color_count < color_count_threshold) {
     obstacle_free_confidence_orange++;
   } else {

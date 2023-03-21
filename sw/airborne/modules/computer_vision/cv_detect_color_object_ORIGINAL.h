@@ -49,15 +49,6 @@ extern uint8_t cod_cr_max2;
 extern bool cod_draw1;
 extern bool cod_draw2;
 
-
-// Module settings new to include the green floor detection
-extern uint8_t cod_lum_min1_floor;
-extern uint8_t cod_lum_max1_floor;
-extern uint8_t cod_cb_min1_floor;
-extern uint8_t cod_cb_max1_floor;
-extern uint8_t cod_cr_min1_floor;
-extern uint8_t cod_cr_max1_floor;
-
 // Module functions
 extern void color_object_detector_init(void);
 extern void color_object_detector_periodic(void);

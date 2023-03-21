@@ -60,6 +60,10 @@ int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that 
 float heading_increment = 5.f;          // heading angle increment [deg]
 float maxDistance = 2.25;               // max waypoint displacement [m]
 
+// extra initializations
+int32_t safe_heading = 0;
+int32_t safe_heading_confidence = 0;
+
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
 /*
@@ -76,9 +80,12 @@ static abi_event color_detection_ev;
 static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
                                int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra)
+                               int32_t quality, int32_t safe_heading, int32_t safe_heading_confidence,
+                               int16_t __attribute__((unused)) extra)
 {
   color_count = quality;
+  safe_heading = safe_heading;
+  safe_heading_confidence = safe_heading_confidence;
 }
 
 /*
@@ -106,7 +113,7 @@ void orange_avoider_periodic(void)
 
   // compute current color thresholds
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-
+  PRINT("safe_heading: %d  safe_heading_confidence: %d state: %d \n", safe_heading, safe_heading_confidence, navigation_state);
   VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
 
   // update our safe confidence using color threshold

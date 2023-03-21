@@ -244,6 +244,14 @@ void color_object_detector_init(void)
  * @param cr_min - minimum cr value for the filter in YCbCr colorspace
  * @param cr_max - maximum cr value for the filter in YCbCr colorspace
  * @param draw - whether or not to draw on image
+ * @param lum_min_floor - minimum y value for the filter in YCbCr colorspace(floor)
+ * @param lum_max_floor - maximum y value for the filter in YCbCr colorspace(floor)
+ * @param cb_min_floor - minimum cb value for the filter in YCbCr colorspace(floor)
+ * @param cb_max_floor - maximum cb value for the filter in YCbCr colorspace(floor)
+ * @param cr_min_floor - minimum cr value for the filter in YCbCr colorspace(floor)
+ * @param cr_max_floor - maximum cr value for the filter in YCbCr colorspace(floor)
+ * @param safe_heading - index of the image segment with the largest number of green pixels (-2, -1, 0, 1, 2)
+ * @safe_heading_confidence - green count for the safest image segment returned
  * @return number of pixels of image within the filter bounds.
  */
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
@@ -263,8 +271,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     // new inits
     *safe_heading = 2;  // default 0; middle; negative = left; positive = right
     int32_t cnt_green = 288;
-    int32_t heading_confidence_arr[5];
-    *safe_heading_confidence = cnt_green;
+    int32_t heading_confidence_arr[5]; // array storing number of green pixels for each of the 5 segments of the photo
+    *safe_heading_confidence = cnt_green; //computes the number of green number of pixels per image segment
     uint8_t th = 100; // threshold for green in the upper part of the image to detect passing over carpets; low obstacles
 
     // iterate over all possible headings from the image
@@ -344,7 +352,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
             //Compare elements of array with max
             if (heading_confidence_arr[j] > maxValue) {
                 maxValue = heading_confidence_arr[j];
-                *safe_heading = j;
+                *safe_heading = j-2; // change the index to center it around 0 with negative values = left; positive = right
                 *safe_heading_confidence = heading_confidence_arr[j];
             }
         }

@@ -358,6 +358,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
         }
         // PRINT("TEST IN cv_detect_color_object");
         // PRINT("safe_heading: %d  safe_heading_confidence: %d\n", safe_heading, safe_heading_confidence);
+    }else{
+        *safe_heading = 0; // return the values just for the straight heading
+        *safe_heading_confidence = heading_confidence_arr[2];
     }
 
     return cnt;

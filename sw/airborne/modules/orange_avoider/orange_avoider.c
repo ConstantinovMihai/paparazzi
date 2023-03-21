@@ -61,8 +61,8 @@ float heading_increment = 5.f;          // heading angle increment [deg]
 float maxDistance = 2.25;               // max waypoint displacement [m]
 
 // extra initializations
-int32_t safe_heading = 0;
-int32_t safe_heading_confidence = 0;
+int32_t safe_heading;
+int32_t safe_heading_confidence;
 
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 

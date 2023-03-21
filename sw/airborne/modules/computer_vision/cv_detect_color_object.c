@@ -151,7 +151,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
     };
 
     int32_t x_c, y_c;
-    int32_t safe_heading = 27;
+    int32_t safe_heading = 2;
     int32_t safe_heading_confidence = 288;
     // Filter and find centroid
     uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, safe_heading, safe_heading_confidence,lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor);
@@ -261,8 +261,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     uint8_t *buffer = img->buf;
 
     // new inits
-    safe_heading = 27;  // default 0; middle; negative = left; positive = right
+    safe_heading = 2;  // default 0; middle; negative = left; positive = right
     int32_t cnt_green = 288;
+    int32_t heading_confidence_arr[5];
     safe_heading_confidence = cnt_green;
     uint8_t th = 100; // threshold for green in the upper part of the image to detect passing over carpets; low obstacles
 
@@ -303,7 +304,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                     //}
                 }
                 // TO DO ADDITIONAL SECTION
-                // DETERMINE IF CURRENT MIDDLE SECTION =2 HAS THE DESIRED THRESHOLD
+                // DETERMINE IF CURRENT MIDDLE SECTION = 2 HAS THE DESIRED THRESHOLD
                 // IF YES PASS ON THAT HEADING + ASSOCIATED COLOR COUNT
                 // IF NOT COMPARE WITH LEFT AND RIGHT
                 // DECIDE IN WHICH SIDE YOU WANT TO SAMPLE FURTHER
@@ -322,6 +323,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                 }
             }
         }
+        //Compute the heading confidence per each of the five segments of the photo
+        heading_confidence_arr[i] = cnt_green;
+
         // Compute centroid for orange detection
         if (cnt > 0) {
             *p_xc = (int32_t) roundf(tot_x / ((float) cnt) - img->w * 0.5f);
@@ -331,6 +335,23 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
             *p_yc = 0;
         }
     }
+
+    // after you iterated over all 5 image segments
+    // Check if the default heading(2 - middle) is still safe or we need to change it
+    if (heading_confidence_arr[2] < th) {
+        uint8_t maxValue = heading_confidence_arr[2];
+        for (int j = 0; j < 5; j++) {
+            //Compare elements of array with max
+            if (heading_confidence_arr[j] > maxValue) {
+                maxValue = heading_confidence_arr[j];
+                safe_heading = j;
+                safe_heading_confidence = heading_confidence_arr[j];
+            }
+        }
+        PRINT("TEST IN cv_detect_color_object");
+        PRINT("safe_heading: %d  safe_heading_confidence: %d\n", safe_heading, safe_heading_confidence);
+    }
+
     return cnt;
 }
 

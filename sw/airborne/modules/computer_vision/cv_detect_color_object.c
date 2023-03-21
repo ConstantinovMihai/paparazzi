@@ -95,7 +95,7 @@ struct color_object_t global_filters[2];
 
 // Function
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
-                              int32_t safe_heading, int32_t safe_heading_confidence,
+                              int32_t *safe_heading, int32_t *safe_heading_confidence,
                               uint8_t lum_min, uint8_t lum_max,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max,
@@ -151,10 +151,10 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
     };
 
     int32_t x_c, y_c;
-    int32_t safe_heading = 2;
-    int32_t safe_heading_confidence = 288;
+    int32_t safe_heading;
+    int32_t safe_heading_confidence;
     // Filter and find centroid
-    uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, safe_heading, safe_heading_confidence,lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor);
+    uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, &safe_heading, &safe_heading_confidence,lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor);
     VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
     VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
                   hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
@@ -247,7 +247,7 @@ void color_object_detector_init(void)
  * @return number of pixels of image within the filter bounds.
  */
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
-                              int32_t safe_heading, int32_t safe_heading_confidence,
+                              int32_t *safe_heading, int32_t *safe_heading_confidence,
                               uint8_t lum_min, uint8_t lum_max,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max,
@@ -261,10 +261,10 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     uint8_t *buffer = img->buf;
 
     // new inits
-    safe_heading = 2;  // default 0; middle; negative = left; positive = right
+    *safe_heading = 2;  // default 0; middle; negative = left; positive = right
     int32_t cnt_green = 288;
     int32_t heading_confidence_arr[5];
-    safe_heading_confidence = cnt_green;
+    *safe_heading_confidence = cnt_green;
     uint8_t th = 100; // threshold for green in the upper part of the image to detect passing over carpets; low obstacles
 
     // iterate over all possible headings from the image
@@ -344,12 +344,12 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
             //Compare elements of array with max
             if (heading_confidence_arr[j] > maxValue) {
                 maxValue = heading_confidence_arr[j];
-                safe_heading = j;
-                safe_heading_confidence = heading_confidence_arr[j];
+                *safe_heading = j;
+                *safe_heading_confidence = heading_confidence_arr[j];
             }
         }
-        PRINT("TEST IN cv_detect_color_object");
-        PRINT("safe_heading: %d  safe_heading_confidence: %d\n", safe_heading, safe_heading_confidence);
+        // PRINT("TEST IN cv_detect_color_object");
+        // PRINT("safe_heading: %d  safe_heading_confidence: %d\n", safe_heading, safe_heading_confidence);
     }
 
     return cnt;
@@ -363,6 +363,8 @@ void color_object_detector_periodic(void)
     pthread_mutex_unlock(&mutex);
 
     if(local_filters[0].updated){
+      PRINT("safe_heading: %d  safe_heading_confidence: %d\n", local_filters[0].safe_heading, local_filters[0].safe_heading_confidence);
+        
         AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
                                    0, 0, local_filters[0].color_count, local_filters[0].safe_heading, local_filters[0].safe_heading_confidence, 0);
         local_filters[0].updated = false;

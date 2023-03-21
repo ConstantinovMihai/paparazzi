@@ -89,7 +89,9 @@ float oa_color_count_frac = 0.18f;
 
 float div_size = 0.f;                                    // divergence size -> see size_divergence.c
 float div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
-int32_t divergence_difference_threshold = 0;             // threshold for the divergence value for optical flow object detection
+float divergence_difference_threshold_right = -0.01f;       // threshold for the divergence value for optical flow object detection
+float divergence_difference_threshold_left = 0.01f;        // threshold for the divergence value for optical flow object detection
+
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_opticalflow_right = 0;  // a measure of how certain we are that the right side of the image is safe for optical flow
@@ -193,7 +195,7 @@ void orange_avoider_periodic(void)
   ////// PRINT DETECTION VALUES //////
   //VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
   //VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %d \n", div_size, divergence_difference_threshold); // Print optical flow divergence size
-  VERBOSE_PRINT("Divergence difference: %lf Divergence threshold: %d \n", div_diff, divergence_difference_threshold); // Print optical flow divergence difference
+  VERBOSE_PRINT("Divergence difference: %lf Divergence threshold right: %lf Divergence threshold left: %lf \n", div_diff, divergence_difference_threshold_right, divergence_difference_threshold_left); // Print optical flow divergence difference
   VERBOSE_PRINT("Optical Flow Detection Right: %d Optical Flow Detection Left: %d Optical Flow Detection Zero: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic Right: %d Obstacle Free Optic Left: %d Obstacle Free Orange: %d \n", opticalflow_detection_right, opticalflow_detection_left, opticalflow_detection_Zero, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow_right, obstacle_free_confidence_opticalflow_left, obstacle_free_confidence_orange); // Print optical flow and orange detection
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
@@ -203,10 +205,10 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
 
-  if (div_diff < divergence_difference_threshold) {
+  if (div_diff < divergence_difference_threshold_right) {
     obstacle_free_confidence_opticalflow_right -= 2;                          // Object detected on right, be more cautious with positive detections
     obstacle_free_confidence_opticalflow_left++;                              // No obstacle on left, so obstacle free confidence increases
-  } else if (div_diff > divergence_difference_threshold) {
+  } else if (div_diff > divergence_difference_threshold_left) {
     obstacle_free_confidence_opticalflow_left -= 2;                           // Object detected on left, be more cautious with positive detections
     obstacle_free_confidence_opticalflow_right++;                             // No obstacle on right, so obstacle free confidence increases
   } else {

@@ -663,8 +663,10 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   // Estimate size divergence:
   if (SIZE_DIV) {
     result->div_size = get_size_divergence(vectors, result->tracked_cnt, n_samples);// * result->fps;
+    result->div_diff = get_difference_divergence(vectors, result->tracked_cnt, n_samples);
   } else {
     result->div_size = 0.0f;
+    result->div_diff = 0.0f;
   }
 
   if (LINEAR_FIT) {

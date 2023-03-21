@@ -28,7 +28,7 @@
  *
  * Uses optical flow vectors as determined with a corner tracker and Lucas Kanade to estimate divergence.
  */
-
+#include "firmwares/rotorcraft/navigation.h"
 #include "size_divergence.h"
 #include <stdlib.h>
 
@@ -137,10 +137,8 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     uint32_t used_samples_right = 0;
     float dx, dy;
     int32_t i, j;
-    int32_t image_width_half = 260; // Width of captured image (maybe needs a header file)
-    // TODO: get how to obtain image_height_half from front camera output
-    int32_t image_height_half = 120;
-
+    int32_t image_width_half = front_camera.output_size.w/2; // Half of the width of the captured image 
+    int32_t image_height_half = front_camera.output_size.h/2; // Half of the height of the captured image 
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
@@ -169,15 +167,15 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
         }
     }
 
-    if (used_samples < 1){
-        return 0.f;
-    }
+    // if (used_samples < 1){
+    //     return 0.f;
+    // }
 
     // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
-    divs_sum_left_mean = divs_sum_left / used_samples_left;
-    divs_sum_right_mean = divs_sum_right / used_samples_right;
+    // divs_sum_left_mean = divs_sum_left / used_samples_left;
+    // divs_sum_right_mean = divs_sum_right / used_samples_right;
 
-    divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
+    // divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
     // Return the calculated mean divergence difference between left and right of image:
     divs_sum_difference = rand(); // TODO: remove this line after debugging

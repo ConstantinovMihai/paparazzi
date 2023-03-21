@@ -93,7 +93,6 @@ static void opticflow_telem_send(struct transport_tx *trans, struct link_device 
                                    &opticflow_result[idx_camera].div_size,
                                    &opticflow_result[idx_camera].surface_roughness,
                                    &opticflow_result[idx_camera].divergence,
-                                   &opticflow_result[idx_camera].div_diff,
                                    &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
     }
   }

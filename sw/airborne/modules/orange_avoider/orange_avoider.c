@@ -29,7 +29,7 @@
  *
  * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
  * (given by color_count_frac) we assume that there is an obstacle and we turn. The same principle is applied but then 
- * using the divergence difference value between left and right of image (div_size_difference_mean) and the divergence threshold (divergence_threshold).
+ * using the divergence difference value between left and right of image (div_diff) and the divergence threshold (divergence_threshold).
  *
  */
 
@@ -192,8 +192,8 @@ void orange_avoider_periodic(void)
 
   ////// PRINT DETECTION VALUES //////
   //VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
-  VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %lf \n", div_size, divergence_threshold); // Print optical flow divergence size
-  VERBOSE_PRINT("Divergence difference: %lf Divergence threshold: %lf \n", div_diff, divergence_threshold); // Print optical flow divergence difference
+  VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %d \n", div_size, divergence_difference_threshold); // Print optical flow divergence size
+  VERBOSE_PRINT("Divergence difference: %lf Divergence threshold: %d \n", div_diff, divergence_difference_threshold); // Print optical flow divergence difference
   //VERBOSE_PRINT("Optical Flow Detection Right: %d Optical Flow Detection Left: %d Optical Flow Detection Zero: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic Right: %d Obstacle Free Optic Left: %d Obstacle Free Orange: %d \n", opticalflow_detection_right, opticalflow_detection_left, opticalflow_detection_Zero, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow_right, obstacle_free_confidence_opticalflow_left, obstacle_free_confidence_orange); // Print optical flow and orange detection
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
@@ -203,10 +203,10 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
 
-  if (div_size_difference_mean < divergence_difference_threshold) {
+  if (div_diff < divergence_difference_threshold) {
     obstacle_free_confidence_opticalflow_right -= 2;                          // Object detected on right, be more cautious with positive detections
     obstacle_free_confidence_opticalflow_left++;                              // No obstacle on left, so obstacle free confidence increases
-  } else if (div_size_difference_mean > divergence_difference_threshold) {
+  } else if (div_diff > divergence_difference_threshold) {
     obstacle_free_confidence_opticalflow_left -= 2;                           // Object detected on left, be more cautious with positive detections
     obstacle_free_confidence_opticalflow_right++;                             // No obstacle on right, so obstacle free confidence increases
   } else {
@@ -227,26 +227,27 @@ void orange_avoider_periodic(void)
   Bound(obstacle_free_confidence_opticalflow_left, 0, max_trajectory_confidence_opticalflow);
 
   // Distance waypoint moves ahead of drone -> compares both orange avoider and optical flow confidences followed by the maxDistance comparison and takes the min value out of all of them
-  float moveDistance_temp1 = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
-  float moveDistance_temp2 = fminf(maxDistance, 0.2f * obstacle_free_confidence_opticalflow_right);
-  float moveDistance_temp3 = fminf(maxDistance, 0.2f * obstacle_free_confidence_opticalflow_left);
+  float moveDistance = maxDistance;
+  // float moveDistance_temp1 = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
+  // float moveDistance_temp2 = fminf(maxDistance, 0.2f * obstacle_free_confidence_opticalflow_right);
+  // float moveDistance_temp3 = fminf(maxDistance, 0.2f * obstacle_free_confidence_opticalflow_left);
 
 
-  if (moveDistance_temp1 < moveDistance_temp2) {
-    moveDistance = moveDistance_temp1;
-  } else if (moveDistance_temp1 < moveDistance_temp3) {
-    moveDistance = moveDistance_temp1;
-  } else if (moveDistance_temp2 < moveDistance_temp1) {
-    moveDistance = moveDistance_temp2;  
-  } else if (moveDistance_temp2 < moveDistance_temp3) {
-    moveDistance = moveDistance_temp2;  
-  } else if (moveDistance_temp3 < moveDistance_temp1) {
-    moveDistance = moveDistance_temp3;  
-  } else if (moveDistance_temp3 < moveDistance_temp2) {
-    moveDistance = moveDistance_temp3;  
-  } else {
-    moveDistance = maxDistance;         
-  }
+  // if (moveDistance_temp1 < moveDistance_temp2) {
+  //   moveDistance = moveDistance_temp1;
+  // } else if (moveDistance_temp1 < moveDistance_temp3) {
+  //   moveDistance = moveDistance_temp1;
+  // } else if (moveDistance_temp2 < moveDistance_temp1) {
+  //   moveDistance = moveDistance_temp2;  
+  // } else if (moveDistance_temp2 < moveDistance_temp3) {
+  //   moveDistance = moveDistance_temp2;  
+  // } else if (moveDistance_temp3 < moveDistance_temp1) {
+  //   moveDistance = moveDistance_temp3;  
+  // } else if (moveDistance_temp3 < moveDistance_temp2) {
+  //   moveDistance = moveDistance_temp3;  
+  // } else {
+  //   moveDistance = maxDistance;         
+  // }
 
   ////// NAVIGATION STATE MACHINE //////
   switch (navigation_state) {

@@ -176,8 +176,6 @@ void orange_avoider_periodic(void)
   VERBOSE_PRINT("Divergence difference: %lf Divergence threshold: %lf \n", div_diff, divergence_threshold); // Print optical flow divergence difference
 
   VERBOSE_PRINT("Optical Flow Detection: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic: %d Obstacle Free Orange: %d \n", opticalflow_detection, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow, obstacle_free_confidence_orange); // Print optical flow and orange detection
-  PRINT("div_diff difference: %f \n", div_diff);
-
     ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   if (color_count < color_count_threshold) {
     obstacle_free_confidence_orange++;

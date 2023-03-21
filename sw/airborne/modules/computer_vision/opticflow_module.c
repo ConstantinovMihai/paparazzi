@@ -61,7 +61,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 #else
 #define ACTIVE_CAMERAS 1
 #endif
-
+#define PRINT(string,...) fprintf(stderr, "[opticflow_module->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 static struct opticflow_result_t opticflow_result[ACTIVE_CAMERAS];    ///< The opticflow result
@@ -93,6 +93,7 @@ static void opticflow_telem_send(struct transport_tx *trans, struct link_device 
                                    &opticflow_result[idx_camera].div_size,
                                    &opticflow_result[idx_camera].surface_roughness,
                                    &opticflow_result[idx_camera].divergence,
+                                   &opticflow_result[idx_camera].div_diff,
                                    &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
     }
   }
@@ -133,6 +134,7 @@ void opticflow_module_run(void)
   for (int idx_camera = 0; idx_camera < ACTIVE_CAMERAS; idx_camera++) {
     if (opticflow_got_result[idx_camera]) {
       uint32_t now_ts = get_sys_time_usec();
+
       AbiSendMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID + idx_camera, now_ts,
                              opticflow_result[idx_camera].flow_x,
                              opticflow_result[idx_camera].flow_y,

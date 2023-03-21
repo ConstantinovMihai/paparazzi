@@ -29,9 +29,10 @@
  * Uses optical flow vectors as determined with a corner tracker and Lucas Kanade to estimate divergence.
  */
 
+#include "firmwares/rotorcraft/navigation.h"
 #include "size_divergence.h"
 #include <stdlib.h>
-
+#define PRINT(string,...) fprintf(stderr, "[size_divergence->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 /**
  * Get divergence from optical flow vectors based on line sizes between corners
  * @param[in] vectors    The optical flow vectors
@@ -136,50 +137,57 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     uint32_t used_samples_left = 0;
     uint32_t used_samples_right = 0;
     float dx, dy;
-    int32_t i, j;
-    int32_t image_width_half = 260; // Width of captured image (maybe needs a header file)
-    // TODO: get how to obtain image_height_half from front camera output
-    int32_t image_height_half = 120;
+    int32_t i;
+    int32_t image_width_half = front_camera.output_size.w/2; // Width of captured image (maybe needs a header file)
+    int32_t image_height_half = front_camera.output_size.h/2;
 
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
-    if (n_samples == 0) {
-        for (i = 0; i < count; i++) {
-            // distance in previous image:
-            dx = (float) vectors[i].pos.x - (float) vectors[j].pos.x;
-            dy = (float) vectors[i].pos.y - (float) vectors[j].pos.y;
+    for (i = 0; i < count; i++) {
+        // distance in previous image:
+        dx = (float)vectors[i].flow_x;
+        dy = (float)vectors[i].flow_y;
 
-            // this is the linear normalisation coefficient
-            coeff_norm = sqrtf(
-                    ((float) vectors[i].pos.x - image_width_half) * ((float) vectors[i].pos.x - image_width_half) +
-                    ((float) vectors[i].pos.y - image_height_half) * ((float) vectors[i].pos.y - image_height_half));
-            // compute the norm of the flow vector and normalise it (normalisation 1)
-            flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
+        PRINT("dx: %f; dy: %f \n", dx, dy);
 
-            // decide whether the optic flow vector is on the left or on the right
-            if ((float) vectors[i].pos.x < image_width_half) {
-                divs_sum_left += flow_norm; // Left part of image considered
-                used_samples_left++;
-            } else {
-                divs_sum_right += flow_norm; // Right part of image considered
-                used_samples_right++;
-            }
-            used_samples++;
+        // this is the linear normalisation coefficient
+        coeff_norm = sqrtf(
+                ((float) vectors[i].pos.x - image_width_half) * ((float) vectors[i].pos.x - image_width_half) +
+                ((float) vectors[i].pos.y - image_height_half) * ((float) vectors[i].pos.y - image_height_half));
+
+        PRINT("coeff_norm: %f \n", coeff_norm);
+
+        // compute the norm of the flow vector and normalise it (normalisation 1)
+        flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
+        PRINT("flow_norm: %f \n", flow_norm);
+
+        PRINT("pos_x: %f; image_width_half: %f \n", vectors[i].pos.x, image_width_half);
+        // decide whether the optic flow vector is on the left or on the right
+        if ((float) vectors[i].pos.x < image_width_half) {
+            divs_sum_left += flow_norm; // Left part of image considered
+            used_samples_left++;
+        } else {
+            divs_sum_right += flow_norm; // Right part of image considered
+            used_samples_right++;
         }
+        used_samples++;
+        PRINT("used_samples_left: %d; used_samples_right: %d \n", used_samples_left, used_samples_right);
+        PRINT("used_samples: %d \n", used_samples);
     }
 
     if (used_samples < 1){
+
         return 0.f;
     }
 
     // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
     divs_sum_left_mean = divs_sum_left / used_samples_left;
     divs_sum_right_mean = divs_sum_right / used_samples_right;
+    PRINT("divs_sum_left_mean: %f \n", divs_sum_left_mean);
+    PRINT("divs_sum_right_mean: %f \n", divs_sum_right_mean);
 
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
-
-    // Return the calculated mean divergence difference between left and right of image:
-    divs_sum_difference = rand(); // TODO: remove this line after debugging
+    PRINT("div_diff difference : %f \n", divs_sum_difference);
     return divs_sum_difference;
 }

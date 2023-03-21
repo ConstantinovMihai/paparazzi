@@ -138,9 +138,9 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     uint32_t used_samples_right = 0;
     float dx, dy;
     int32_t i;
-    int32_t image_width_half = front_camera.output_size.w/2; // Width of captured image (maybe needs a header file)
-    int32_t image_height_half = front_camera.output_size.h/2;
-
+    int32_t image_width_half = (front_camera.output_size.h/2) * 100; // Width of captured image (maybe needs a header file)
+    int32_t image_height_half = (front_camera.output_size.w/2) * 100;
+    PRINT("image_height_half: %d; image_width_half: %d \n", image_height_half, image_width_half);
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
@@ -162,7 +162,7 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
         flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
         PRINT("flow_norm: %f \n", flow_norm);
 
-        PRINT("pos_x: %f; image_width_half: %f \n", vectors[i].pos.x, image_width_half);
+        PRINT("pos_x: %d; image_width_half: %d \n", vectors[i].pos.x, image_width_half);
         // decide whether the optic flow vector is on the left or on the right
         if ((float) vectors[i].pos.x < image_width_half) {
             divs_sum_left += flow_norm; // Left part of image considered
@@ -176,8 +176,7 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
         PRINT("used_samples: %d \n", used_samples);
     }
 
-    if (used_samples < 1){
-
+    if (used_samples_left < 1 || used_samples_right < 1){
         return 0.f;
     }
 

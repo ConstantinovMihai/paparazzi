@@ -168,6 +168,7 @@ void orange_avoider_periodic(void)
   }
 
   ////// COMPUTE CURRENT COLOR THRESHOLDS //////
+    PRINT("front_camera.output_size.w: %d; front_camera.output_size.h: %d \n", front_camera.output_size.w, front_camera.output_size.h);
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h; // Front_camera defined in airframe xml, with the video_capture module
 
   ////// PRINT DETECTION VALUES //////

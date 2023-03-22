@@ -273,7 +273,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     int32_t cnt_green = 288;
     int32_t heading_confidence_arr[5]; // array storing number of green pixels for each of the 5 segments of the photo
     *safe_heading_confidence = cnt_green; //computes the number of green number of pixels per image segment
-    uint8_t th = 100; // threshold for green in the upper part of the image to detect passing over carpets; low obstacles
+    uint8_t th = 500; // threshold for green in the upper part of the image to detect passing over carpets; low obstacles
 
     // iterate over all possible headings from the image
     for (int i = 0; i < 5; i++) {

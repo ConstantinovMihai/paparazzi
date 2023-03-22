@@ -33,6 +33,8 @@
 #include "firmwares/rotorcraft/navigation.h"
 #include <stdlib.h>
 
+#define PRINT(string,...) fprintf(stderr, "[orange_avoider->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+
 /**
  * Get divergence from optical flow vectors based on line sizes between corners
  * @param[in] vectors    The optical flow vectors
@@ -149,6 +151,8 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
         dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
         distance_1 = sqrtf(dx * dx + dy * dy);
 
+        PRINT("dx (prev): %f; dy (prev): %f; distance_1: %f", dx, dy, distance_1)
+
         if (distance_1 < 1E-5) {
           continue;
         }
@@ -158,15 +162,20 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
         dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
         distance_2 = sqrtf(dx * dx + dy * dy);
 
+        PRINT("dx (curr): %f; dy (curr): %f; distance_2: %f", dx, dy, distance_2)
+
         if ((float)vectors[i].pos.x < image_width_half) {
           divs_sum_left += (distance_2 - distance_1) / distance_1; // Left part of image considered
+          PRINT("divs_sum_left: %f", divs_sum_left)
           //used_samples_left++;
         }
         else {
           divs_sum_right += (distance_2 - distance_1) / distance_1; // Right part of image considered
+          PRINT("divs_sum_right: %f", divs_sum_left)
           //used_samples_right++;
         }
         used_samples++;
+        PRINT("used_samples: %d", used_samples)
       }
     }
   } else {

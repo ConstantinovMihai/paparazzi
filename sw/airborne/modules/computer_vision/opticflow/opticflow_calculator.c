@@ -661,11 +661,16 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   }
 
   static int n_samples = 100;
+  struct flow_t* filtered_vectors = calloc(result->tracked_cnt, sizeof(struct flow_t));
   // Estimate size divergence:
   if (SIZE_DIV) {
-
-    result->div_size = get_size_divergence(vectors, result->tracked_cnt, n_samples);// * result->fps;
-    result->div_diff = get_difference_divergence(vectors, result->tracked_cnt, n_samples);
+    // Filter vectors to get only optical flow vectors in specified region of interest
+    // PRINT("size of filtered_vectors (before): %d \n", sizeof(filtered_vectors));
+    filter_vectors(vectors, result->tracked_cnt, filtered_vectors);
+    // PRINT("first filtered vector pos.x: %d \n", filtered_vectors[0].pos.x);
+    // PRINT("size of filtered_vectors (after): %d \n", sizeof(filtered_vectors));
+    result->div_size = get_size_divergence(filtered_vectors, result->tracked_cnt, n_samples);// * result->fps;
+    result->div_diff = get_difference_divergence(filtered_vectors, result->tracked_cnt, n_samples);
   } else {
     result->div_size = 0.0f;
     result->div_diff = 0.0f;

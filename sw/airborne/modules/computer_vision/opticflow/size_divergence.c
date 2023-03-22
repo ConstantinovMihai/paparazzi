@@ -44,12 +44,10 @@ bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x
 */
 
 bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x2, int32_t y1, int32_t y2) {
-    // PRINT("inside func vectorInROI\n");
+    
     if (vectorPosX >= (uint32_t)x1 && vectorPosX <= (uint32_t)x2 && vectorPosY >= (uint32_t)y1 && vectorPosY <= (uint32_t)y2) {
-        // PRINT("returning true inside func vectorInROI\n");
         return true;
     } else {
-        // PRINT("returning false inside func vectorInROI\n");
         return false;
     }
 }
@@ -60,51 +58,33 @@ int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *fi
     float h_factor = 0.5;
     float w_factor = 0.8;
     float scale = 100;
-    // int32_t cropped_image_width = (front_camera.output_size.h * w_factor) * 100;
-    // int32_t cropped_image_height = (front_camera.output_size.w * h_factor) * 100;
 
-    // Get all points of cropped image in original bounds
+    // Get all points of cropped image in original bounds -> Region of Interest
+    // Horizontal Region of Interest
     int32_t top_left_horizontal = (0.5f * front_camera.output_size.h * (1.f - w_factor)) * scale;
+    int32_t top_right_horizontal = top_left_horizontal + (w_factor*front_camera.output_size.h * scale);
+
+    // Vertical Region of Interest
     int32_t top_left_vertical = (0.5f * front_camera.output_size.w * (1.f - h_factor)) * scale;
-
-    int32_t top_right_horizontal = top_left_horizontal + (w_factor*front_camera.output_size.h*scale);
-    int32_t top_right_vertical = top_left_vertical;
-
-    int32_t bottom_left_horizontal = top_left_horizontal;
-    int32_t bottom_left_vertical = top_left_vertical + (h_factor*front_camera.output_size.w*scale);
-
-    int32_t bottom_right_horizontal = top_right_horizontal;
-    int32_t bottom_right_vertical = bottom_left_vertical;
-
-    // PRINT("TLh: %d, TRh: %d, TLv: %d, BLv: %d \n", top_left_horizontal, top_right_horizontal, 
-            // top_left_vertical, bottom_left_vertical);
+    int32_t bottom_left_vertical = top_left_vertical + (h_factor*front_camera.output_size.w * scale);
 
     int32_t i;
     int32_t filteredCount = 0;
-
     struct flow_t tV; // tempVector
 
-    // filtered vectors (filtered={})
-
-    // Go through all vectors and keep count of how many remain after filtration
+    // Go through all vectors and keep count of how many remain after filtering
     for (i = 0; i < count; i++) {
-        // get vector i
+        // Get vector i
         tV = original_vectors[i];
-        // PRINT("i: %d; tV pos x: %d; tV pos y: %d \n", i, tV.pos.x, tV.pos.y);
-        // Check if vector is in ROI
+        
+        // Check if vector is in region of interest
         if (vectorInROI(tV.pos.x, tV.pos.y, top_left_horizontal, top_right_horizontal, 
             top_left_vertical, bottom_left_vertical)) 
         {   
-            // PRINT("inside if because vector %d is in ROI! \n", i);
             filtered_vectors[filteredCount] = tV;
-            // PRINT("changed vector %d in filtered_vectors to => pos x: %d; pos y: %d", 
-                // filteredCount, filtered_vectors[filteredCount].pos.x, 
-                // filtered_vectors[filteredCount].pos.y);
             filteredCount++;
         }
     }
-    // set length of filtered_vectors correctly
-    // *filtered_vectors = realloc(*filtered_vectors, filteredCount*sizeof(struct flow_t));
     return 0;
 }
 
@@ -216,30 +196,23 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     int32_t i;
     int32_t image_width_half = (front_camera.output_size.h/2) * 100; // Width of captured image (maybe needs a header file)
     int32_t image_height_half = (front_camera.output_size.w/2) * 100;
-    //PRINT("image_height_half: %d; image_width_half: %d \n", image_height_half, image_width_half);
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
     for (i = 0; i < count; i++) {
-        // distance in previous image:
+        // Distance in previous image:
         dx = (float)vectors[i].flow_x;
         dy = (float)vectors[i].flow_y;
-
-        //PRINT("dx: %f; dy: %f \n", dx, dy);
 
         // this is the linear normalisation coefficient
         coeff_norm = sqrtf(
                 ((float) vectors[i].pos.x - image_width_half) * ((float) vectors[i].pos.x - image_width_half) +
                 ((float) vectors[i].pos.y - image_height_half) * ((float) vectors[i].pos.y - image_height_half));
 
-        //PRINT("coeff_norm: %f \n", coeff_norm);
-
-        // compute the norm of the flow vector and normalise it (normalisation 1)
+        // Compute the norm of the flow vector and normalise it (normalisation 1)
         flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
-        //PRINT("flow_norm: %f \n", flow_norm);
 
-        //PRINT("pos_x: %d; image_width_half: %d \n", vectors[i].pos.x, image_width_half);
-        // decide whether the optic flow vector is on the left or on the right
+        // Decide whether the optic flow vector is on the left or on the right
         if ((float) vectors[i].pos.x < image_width_half) {
             divs_sum_left += flow_norm; // Left part of image considered
             used_samples_left++;
@@ -248,8 +221,6 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
             used_samples_right++;
         }
         used_samples++;
-        //PRINT("used_samples_left: %d; used_samples_right: %d \n", used_samples_left, used_samples_right);
-        //PRINT("used_samples: %d \n", used_samples);
     }
 
     if (used_samples_left < 1 || used_samples_right < 1){
@@ -259,10 +230,7 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
     divs_sum_left_mean = divs_sum_left / used_samples_left;
     divs_sum_right_mean = divs_sum_right / used_samples_right;
-    //PRINT("divs_sum_left_mean: %f \n", divs_sum_left_mean);
-    //PRINT("divs_sum_right_mean: %f \n", divs_sum_right_mean);
 
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
-    //PRINT("div_diff difference : %f \n", divs_sum_difference);
     return divs_sum_difference;
 }

@@ -631,7 +631,6 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
                                   opticflow->window_size / 2, opticflow->subpixel_factor, opticflow->max_iterations,
                                   opticflow->threshold_vec, opticflow->max_track_corners, opticflow->pyramid_level, keep_bad_points);
 
-    // printf("Tracked %d points back.\n", back_track_cnt);
     int32_t back_x, back_y, diff_x, diff_y, dist_squared;
     int32_t back_track_threshold = 200;
 
@@ -642,7 +641,6 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
         diff_x = back_x - vectors[i].pos.x;
         diff_y = back_y - vectors[i].pos.y;
         dist_squared = diff_x * diff_x + diff_y * diff_y;
-        // printf("Vector %d: x,y = %d, %d, back x, y = %d, %d, back tracking error %d\n", i, vectors[i].pos.x, vectors[i].pos.y, back_x, back_y, dist_squared);
         if (dist_squared > back_track_threshold) {
           vectors[i].error = LARGE_FLOW_ERROR;
         }
@@ -665,10 +663,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   // Estimate size divergence:
   if (SIZE_DIV) {
     // Filter vectors to get only optical flow vectors in specified region of interest
-    // PRINT("size of filtered_vectors (before): %d \n", sizeof(filtered_vectors));
     filter_vectors(vectors, result->tracked_cnt, filtered_vectors);
-    // PRINT("first filtered vector pos.x: %d \n", filtered_vectors[0].pos.x);
-    // PRINT("size of filtered_vectors (after): %d \n", sizeof(filtered_vectors));
     result->div_size = get_size_divergence(filtered_vectors, result->tracked_cnt, n_samples);// * result->fps;
     result->div_diff = get_difference_divergence(filtered_vectors, result->tracked_cnt, n_samples);
   } else {

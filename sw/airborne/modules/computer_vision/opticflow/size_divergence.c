@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #define PRINT(string,...) fprintf(stderr, "[size_divergence->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
+float moving_average_filter_div_diff(float current_value, float old_value);
 bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x2, int32_t y1, int32_t y2);
 
 /**
@@ -172,7 +173,15 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
     return divs_sum / used_samples;
 }
 
-// TODO: test this function, and send an ABI message to the Navigator to make decision based on the divergence difference
+float moving_average_filter_div_diff(float current_value, float old_value)
+{
+    return ((0.4*current_value) + (1-0.4)*old_value);
+}
+
+// Keep track of the old divergence difference for the moving average filter
+float divs_sum_difference_old = 0.f;
+bool F_FIRST_TIME_MOVING_FILTER = true;
+
 float get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
 {
     // computes the difference between the normalised divergence on the left and right sides of the image
@@ -231,5 +240,17 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     divs_sum_right_mean = divs_sum_right / used_samples_right;
 
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
+
+    // If this is the first time the function is called, set the old value to the new value
+    if (F_FIRST_TIME_MOVING_FILTER) {
+        divs_sum_difference_old = divs_sum_difference;
+        F_FIRST_TIME_MOVING_FILTER = false;
+    }
+
+    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
+    divs_sum_difference = moving_average_filter_div_diff(divs_sum_difference, divs_sum_difference_old);
+    divs_sum_difference_old = divs_sum_difference;
+
+
     return divs_sum_difference;
 }

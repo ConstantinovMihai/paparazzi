@@ -75,8 +75,8 @@ enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING;
 int32_t color_count = 0;                                 // orange color count from color filter for obstacle detection
 float oa_color_count_frac = 0.18f;
 
-// float div_size = 0.f;                                    // divergence size -> see size_divergence.c
-// float div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
+float div_size = 0.f;                                    // divergence size -> see size_divergence.c
+float div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
 // int32_t divergence_threshold = 0;             // threshold for the divergence value for optical flow object detection
 // int32_t divergence_difference_threshold = 0;             // threshold for the divergence difference value for optical flow object detection
 
@@ -121,24 +121,24 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   color_count = quality;
 }
 
-// //// Receive ABI message from opticflow_module.c, where the divergence value is of interest
-// #ifndef OPTICAL_FLOW_ID
-// #define OPTICAL_FLOW_ID ABI_BROADCAST
-// #endif
-// static abi_event optical_flow_ev;
-// static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
-//                             uint32_t __attribute__((unused)) stamp, 
-//                             int32_t __attribute__((unused)) flow_x,
-//                             int32_t __attribute__((unused)) flow_y,
-//                             int32_t __attribute__((unused)) flow_der_x,
-//                             int32_t __attribute__((unused)) flow_der_y,
-//                             float __attribute__((unused)) quality, 
-//                             float size_divergence,
-//                             float diff_divergence) 
-// {
-//   div_size = size_divergence;
-//   div_diff = diff_divergence;
-// }
+//// Receive ABI message from opticflow_module.c, where the divergence value is of interest
+#ifndef OPTICAL_FLOW_ID
+#define OPTICAL_FLOW_ID ABI_BROADCAST
+#endif
+static abi_event optical_flow_ev;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+                            uint32_t __attribute__((unused)) stamp, 
+                            int32_t __attribute__((unused)) flow_x,
+                            int32_t __attribute__((unused)) flow_y,
+                            int32_t __attribute__((unused)) flow_der_x,
+                            int32_t __attribute__((unused)) flow_der_y,
+                            float __attribute__((unused)) quality, 
+                            float size_divergence,
+                            float diff_divergence) 
+{
+  div_size = size_divergence;
+  div_diff = diff_divergence;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     ////// RUN AUTOPILOT INIT FUNCTION //////
@@ -151,8 +151,8 @@ void orange_avoider_init(void)
   //// Bind the colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
-  //// Bind the optical flow callbacks to receive the divergence values
-  // AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
+  // //// Bind the optical flow callbacks to receive the divergence values
+  AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -183,6 +183,8 @@ void orange_avoider_periodic(void)
   //VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state); // Print visual detection pixel colour values and navigation state
   // VERBOSE_PRINT("Divergence size: %lf Divergence threshold: %d \n", div_size, divergence_threshold); // Print optical flow divergence size
   // VERBOSE_PRINT("Divergence difference: %lf Divergence threshold: %d \n", div_diff, divergence_difference_threshold); // Print optical flow divergence difference
+    //// Bind the optical flow callbacks to receive the divergence values
+  // PRINT("div diff: %lf \n", div_diff);
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   if (color_count < color_count_threshold) {
@@ -242,12 +244,6 @@ void orange_avoider_periodic(void)
         F_ALREADY_SEARCHING = true;
         // Randomly decide whether to turn CW or CCW
         random_direction = rand() % 2;
-        // Print the direction that was chosen
-        if (random_direction == 0) {
-          VERBOSE_PRINT("CHOSEN DIRECTION CW FOR TURNING \n");
-        } else {
-          VERBOSE_PRINT("CHOSEN DIRECTION CCW FOR TURNING \n");
-        }
       }
 
       if (obstacle_free_confidence_orange >= 3){

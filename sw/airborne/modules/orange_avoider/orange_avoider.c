@@ -80,7 +80,7 @@ double div_diff = 0.f;                                    // divergence differen
 // int32_t divergence_threshold = 0;             // threshold for the divergence value for optical flow object detection
 double divergence_difference_threshold = 0.1;             // threshold for the divergence difference value for optical flow object detection
 
-int32_t Kp = -120;                                        // Proportional gain for div_diff turning control
+int32_t Kp = -140;                                        // Proportional gain for div_diff turning control
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_div_diff = 0;           // a measure of how certain we are that the divergence difference is safe for optical flow
@@ -93,16 +93,11 @@ float heading_increment_CW = 12.f;                       // CW heading angle inc
 float heading_increment_CCW = -12.f;                     // CCW heading angle increment [deg]
 float heading_increment_TurnAround = 180.f;              // Turn 180 [deg] CW to go back
 
-// COUNTERS
-int16_t C_DIV_DIFF_DETECTIONS = 0;                         // counter for the number of consecutive divergence difference detections                    
-
 // FLAGS
 int32_t random_direction;                                  // random number for random waypoint displacement
 bool F_ALREADY_SEARCHING = false;                          // flag to check if we are already searching for a safe heading
 bool F_WAS_OUT_OF_BOUNDS = false;                          // flag to check if we were out of bounds before
 
-// TEMP VARIABLES
-double previous_good_div_diff = 0.f;                       // previous good divergence difference value
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
  * any time data calculated in another module needs to be accessed. Including the file where this external
@@ -186,25 +181,10 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
   
-  // Div difference (and check for consecutive divergence difference detections) 
+  // Div difference
   if (fabs(div_diff) < divergence_difference_threshold) {
     obstacle_free_confidence_div_diff++;
-    C_DIV_DIFF_DETECTIONS = 0;
   } else {
-    C_DIV_DIFF_DETECTIONS++;
-    if (C_DIV_DIFF_DETECTIONS >= 3) {
-      // Set previous_good_div_diff to the diff if previous_good_div_diff is zero
-      if (fabs(previous_good_div_diff) < 0.00001f) {
-        previous_good_div_diff = div_diff;
-      }
-      // Set previous_good_div_diff to minimum of previous value of div_diff or current value of div_diff
-      if (fabs(div_diff) < fabs(previous_good_div_diff)) {
-        previous_good_div_diff = div_diff;
-      }
-      previous_good_div_diff = div_diff;
-    } else {
-      previous_good_div_diff = 0.f;
-    }
     obstacle_free_confidence_div_diff -= 5; // Be more cautious with positive obstacle detections
   }
 
@@ -298,21 +278,7 @@ void orange_avoider_periodic(void)
       if (obstacle_free_confidence_div_diff >= 6) {
         navigation_state = SAFE;
       } else {
-        if (fabs(div_diff) > 0.00001f) {
-          // Bind div_diff to previous_good_div_diff
-          // PRINT("[DETECTION] div_diff: %f; previous_good_div_diff: %f \n", div_diff, previous_good_div_diff);
-          // div_diff = fmaxf(fabs(div_diff), fabs(previous_good_div_diff));
-
-          // if (previous_good_div_diff < 0.0f) {
-          //   div_diff = div_diff * -1;
-          // }
-          PRINT("[DETECTION] div_diff: %f; \n", div_diff);
-          // if number is negativw multip
-          increase_nav_heading(Kp * div_diff);
-        } else {
-          increase_nav_heading(Kp * previous_good_div_diff);
-          PRINT("[DETECTION] previous_good_div_diff: %f; \n", previous_good_div_diff);
-        }
+        increase_nav_heading(Kp * div_diff);
       }
       
       break; 

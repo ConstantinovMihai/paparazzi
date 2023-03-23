@@ -298,12 +298,21 @@ void orange_avoider_periodic(void)
       if (obstacle_free_confidence_div_diff >= 6) {
         navigation_state = SAFE;
       } else {
-        // if (fabs(div_diff) > 0.00001f) {
+        if (fabs(div_diff) > 0.00001f) {
           // Bind div_diff to previous_good_div_diff
-        PRINT("[DETECTION] div_diff: %f; previous_good_div_diff: %f \n", div_diff, previous_good_div_diff);
-        div_diff = fmaxf(div_diff, previous_good_div_diff);
-        increase_nav_heading(Kp * div_diff);
-        // }
+          // PRINT("[DETECTION] div_diff: %f; previous_good_div_diff: %f \n", div_diff, previous_good_div_diff);
+          // div_diff = fmaxf(fabs(div_diff), fabs(previous_good_div_diff));
+
+          // if (previous_good_div_diff < 0.0f) {
+          //   div_diff = div_diff * -1;
+          // }
+          PRINT("[DETECTION] div_diff: %f; \n", div_diff);
+          // if number is negativw multip
+          increase_nav_heading(Kp * div_diff);
+        } else {
+          increase_nav_heading(Kp * previous_good_div_diff);
+          PRINT("[DETECTION] previous_good_div_diff: %f; \n", previous_good_div_diff);
+        }
       }
       
       break; 

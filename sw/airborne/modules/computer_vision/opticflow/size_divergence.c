@@ -88,7 +88,6 @@ int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *fi
     return 0;
 }
 
-
 /**
  * Get divergence from optical flow vectors based on line sizes between corners
  * @param[in] vectors    The optical flow vectors

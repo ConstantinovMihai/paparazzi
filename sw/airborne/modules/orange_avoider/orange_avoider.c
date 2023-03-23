@@ -140,7 +140,6 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   // PRINT("RAN CB ORANGE");
 }
 
-
 // //// Receive ABI message from opticflow_module.c, where the divergence value is of interest
 // #ifndef OPTICAL_FLOW_ID
 // #define OPTICAL_FLOW_ID ABI_BROADCAST

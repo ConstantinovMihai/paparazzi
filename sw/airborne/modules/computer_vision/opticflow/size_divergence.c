@@ -182,25 +182,25 @@ float moving_average_filter_div_diff(float current_value, float old_value)
 float divs_sum_difference_old = 0.f;
 bool F_FIRST_TIME_MOVING_FILTER = true;
 
-float get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
+double get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
 {
     // computes the difference between the normalised divergence on the left and right sides of the image
     // the two normalisations are:
     // 1. normalise for the linear expansion of optic flow vectors situated further from the center of the image
     // 2. normalise for the amount of optic flow vectors on each half of the image
 
-    float flow_norm;
-    float coeff_norm;                // normalisation coefficient
+    double flow_norm;
+    double coeff_norm;                // normalisation coefficient
 
-    float divs_sum_left = 0.f;       // Divergence in left part of image
-    float divs_sum_left_mean = 0.f;  // Mean divergence in left part of image
-    float divs_sum_right = 0.f;      // Divergence in right part of image
-    float divs_sum_right_mean = 0.f; // Mean divergence in right part of image
-    float divs_sum_difference = 0.f; // Difference in divergence used to determine which side has the larger divergence
+    double divs_sum_left = 0.f;       // Divergence in left part of image
+    double divs_sum_left_mean = 0.f;  // Mean divergence in left part of image
+    double divs_sum_right = 0.f;      // Divergence in right part of image
+    double divs_sum_right_mean = 0.f; // Mean divergence in right part of image
+    double divs_sum_difference = 0.f; // Difference in divergence used to determine which side has the larger divergence
     uint32_t used_samples = 0;
     uint32_t used_samples_left = 0;
     uint32_t used_samples_right = 0;
-    float dx, dy;
+    double dx, dy;
     int32_t i;
     int32_t image_width_half = (front_camera.output_size.h/2) * 100; // Width of captured image (maybe needs a header file)
     int32_t image_height_half = (front_camera.output_size.w/2) * 100;
@@ -209,19 +209,19 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     // TODO: apply random consensus method
     for (i = 0; i < count; i++) {
         // Distance in previous image:
-        dx = (float)vectors[i].flow_x;
-        dy = (float)vectors[i].flow_y;
+        dx = (double)vectors[i].flow_x;
+        dy = (double)vectors[i].flow_y;
 
         // this is the linear normalisation coefficient
         coeff_norm = sqrtf(
-                ((float) vectors[i].pos.x - image_width_half) * ((float) vectors[i].pos.x - image_width_half) +
-                ((float) vectors[i].pos.y - image_height_half) * ((float) vectors[i].pos.y - image_height_half));
+                ((double) vectors[i].pos.x - image_width_half) * ((double) vectors[i].pos.x - image_width_half) +
+                ((double) vectors[i].pos.y - image_height_half) * ((double) vectors[i].pos.y - image_height_half));
 
         // Compute the norm of the flow vector and normalise it (normalisation 1)
         flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
 
         // Decide whether the optic flow vector is on the left or on the right
-        if ((float) vectors[i].pos.x < image_width_half) {
+        if ((double) vectors[i].pos.x < image_width_half) {
             divs_sum_left += flow_norm; // Left part of image considered
             used_samples_left++;
         } else {
@@ -240,6 +240,8 @@ float get_difference_divergence(struct flow_t *vectors, int count, int n_samples
     divs_sum_right_mean = divs_sum_right / used_samples_right;
 
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
+
+    // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
 
     // If this is the first time the function is called, set the old value to the new value
     if (F_FIRST_TIME_MOVING_FILTER) {

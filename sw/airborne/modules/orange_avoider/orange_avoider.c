@@ -76,15 +76,14 @@ int32_t color_count = 0;                                 // orange color count f
 float oa_color_count_frac = 0.18f;
 
 float div_size = 0.f;                                    // divergence size -> see size_divergence.c
-float div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
+double div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
 // int32_t divergence_threshold = 0;             // threshold for the divergence value for optical flow object detection
-// int32_t divergence_difference_threshold = 0;             // threshold for the divergence difference value for optical flow object detection
+double divergence_difference_threshold = 0.12;             // threshold for the divergence difference value for optical flow object detection
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
-// int16_t obstacle_free_confidence_opticalflow_right = 0;  // a measure of how certain we are that the right side of the image is safe for optical flow
-// int16_t obstacle_free_confidence_opticalflow_left = 0;   // a measure of how certain we are that the left side of the image is safe for optical flow
+int16_t obstacle_free_confidence_div_diff = 0;           // a measure of how certain we are that the divergence difference is safe for optical flow
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free for orange detection
-// const int16_t max_trajectory_confidence_opticalflow = 5; // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
+const int16_t max_trajectory_confidence_div_diff = 7;    // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
 
 float maxDistance = 0.8;                                 // max waypoint displacement [m]
 float moveDistance = 0.f;                                // waypoint displacement [m]
@@ -95,6 +94,8 @@ float heading_increment_TurnAround = 180.f;              // Turn 180 [deg] CW to
 // FLAGS
 int32_t random_direction;                                  // random number for random waypoint displacement
 bool F_ALREADY_SEARCHING = false;                          // flag to check if we are already searching for a safe heading
+
+bool F_WAS_OUT_OF_BOUNDS = false;                          // flag to check if we were out of bounds before
 
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
@@ -134,7 +135,7 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             int32_t __attribute__((unused)) flow_der_y,
                             float __attribute__((unused)) quality, 
                             float size_divergence,
-                            float diff_divergence) 
+                            double diff_divergence) 
 {
   div_size = size_divergence;
   div_diff = diff_divergence;
@@ -187,15 +188,27 @@ void orange_avoider_periodic(void)
   // PRINT("div diff: %lf \n", div_diff);
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
+  // Orange avoider
   if (color_count < color_count_threshold) {
     obstacle_free_confidence_orange++;
   } else {
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
+  
+  // Div difference
+  if (fabs(div_diff) < divergence_difference_threshold) {
+    obstacle_free_confidence_div_diff++;
+  } else {
+    obstacle_free_confidence_div_diff -= 4; // Be more cautious with positive obstacle detections
+  }
 
   // Bound obstacle_free_confidence_orange
   Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange);
 
+  // Bound obstacle_free_confidence_div_diff
+  Bound(obstacle_free_confidence_div_diff, 0, max_trajectory_confidence_div_diff);
+
+  PRINT("Div diff obstacle free confidence: %d; Div diff: %lf; Threshold: %lf \n", obstacle_free_confidence_div_diff, div_diff, divergence_difference_threshold);
 
   // Distance waypoint moves ahead of drone -> compares both orange avoider and optical flow confidences followed by the maxDistance comparison and takes the min value out of all of them
   float moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
@@ -236,7 +249,13 @@ void orange_avoider_periodic(void)
     case SEARCH_SAFE_HEADING:
       // Stop
       guidance_h_set_body_vel(0, 0);
-      
+
+      // Check if we were previously out of bounds and fix the direction to CW if so
+      if (F_WAS_OUT_OF_BOUNDS == true) {
+        random_direction = 0;
+        F_WAS_OUT_OF_BOUNDS = false;
+        F_ALREADY_SEARCHING = true;
+      }
       /////////////// ORANGE AVOIDER ///////////////
       // Check if we were already searching for a safe heading for orange avoider
       if (F_ALREADY_SEARCHING == false) {
@@ -275,6 +294,9 @@ void orange_avoider_periodic(void)
       
       // Move waypoint forward
       moveWaypointForward(WP_TRAJECTORY, 2.1f);
+
+      // Set flag F_WAS_OUT_OF_BOUNDS to true
+      F_WAS_OUT_OF_BOUNDS = true;
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         // Add offset to head back into arena

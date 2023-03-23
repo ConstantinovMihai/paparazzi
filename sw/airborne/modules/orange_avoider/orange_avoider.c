@@ -173,8 +173,8 @@ void orange_avoider_init(void)
   //// Bind the colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
-  //// Bind the optical flow callbacks to receive the divergence values
-  // AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
+  // //// Bind the optical flow callbacks to receive the divergence values
+  AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -110,6 +110,8 @@ int16_t C_ROBUSTNESS = 0;
 // Debugging:
 enum navigation_state_t previous_state = SAFE;           // previous state
 
+bool F_WAS_OUT_OF_BOUNDS = false;                          // flag to check if we were out of bounds before
+
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
  * any time data calculated in another module needs to be accessed. Including the file where this external
@@ -199,6 +201,13 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange++;
   } else {
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
+  }
+  
+  // Div difference
+  if (fabs(div_diff) < divergence_difference_threshold) {
+    obstacle_free_confidence_div_diff++;
+  } else {
+    obstacle_free_confidence_div_diff -= 4; // Be more cautious with positive obstacle detections
   }
 
   // Bound obstacle_free_confidence_orange
@@ -319,6 +328,9 @@ void orange_avoider_periodic(void)
       
       // Move waypoint forward
       moveWaypointForward(WP_TRAJECTORY, 2.1f);
+
+      // Set flag F_WAS_OUT_OF_BOUNDS to true
+      F_WAS_OUT_OF_BOUNDS = true;
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         // Add offset to head back into arena

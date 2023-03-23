@@ -112,8 +112,6 @@ enum navigation_state_t previous_state = SAFE;           // previous state
 
 bool F_WAS_OUT_OF_BOUNDS = false;                          // flag to check if we were out of bounds before
 
-// TEMP VARIABLES
-double previous_good_div_diff = 0.f;                       // previous good divergence difference value
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
  * any time data calculated in another module needs to be accessed. Including the file where this external
@@ -205,25 +203,10 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
   
-  // Div difference (and check for consecutive divergence difference detections) 
+  // Div difference
   if (fabs(div_diff) < divergence_difference_threshold) {
     obstacle_free_confidence_div_diff++;
-    C_DIV_DIFF_DETECTIONS = 0;
   } else {
-    C_DIV_DIFF_DETECTIONS++;
-    if (C_DIV_DIFF_DETECTIONS >= 3) {
-      // Set previous_good_div_diff to the diff if previous_good_div_diff is zero
-      if (fabs(previous_good_div_diff) < 0.00001f) {
-        previous_good_div_diff = div_diff;
-      }
-      // Set previous_good_div_diff to minimum of previous value of div_diff or current value of div_diff
-      if (fabs(div_diff) < fabs(previous_good_div_diff)) {
-        previous_good_div_diff = div_diff;
-      }
-      previous_good_div_diff = div_diff;
-    } else {
-      previous_good_div_diff = 0.f;
-    }
     obstacle_free_confidence_div_diff -= 5; // Be more cautious with positive obstacle detections
   }
 

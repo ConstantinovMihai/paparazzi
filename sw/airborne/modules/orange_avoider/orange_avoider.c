@@ -214,6 +214,13 @@ void orange_avoider_periodic(void)
     }
   }
 
+  // Div size
+  if (fabs(div_size) < divergence_threshold) {
+    obstacle_free_confidence_div_size++;
+  } else {
+    obstacle_free_confidence_div_size -= 1; // Be more cautious with positive obstacle detections
+  }
+
   // Bound obstacle_free_confidence_orange
   Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange);
 

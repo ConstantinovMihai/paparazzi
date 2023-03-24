@@ -78,7 +78,7 @@ float oa_color_count_frac = 0.18f;
 float div_size = 0.f;                                    // divergence size -> see size_divergence.c
 double div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
 // int32_t divergence_threshold = 0;             // threshold for the divergence value for optical flow object detection
-double divergence_difference_threshold = 0.15;             // threshold for the divergence difference value for optical flow object detection
+double divergence_difference_threshold = 0.1;             // threshold for the divergence difference value for optical flow object detection
 
 int32_t Kp = -140;                                        // Proportional gain for div_diff turning control
 

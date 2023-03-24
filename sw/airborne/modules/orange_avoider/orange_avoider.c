@@ -76,11 +76,12 @@ int32_t color_count = 0;                                 // orange color count f
 float oa_color_count_frac = 0.18f;
 
 float div_size = 0.f;                                    // divergence size -> see size_divergence.c
-double div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
-// int32_t divergence_threshold = 0;             // threshold for the divergence value for optical flow object detection
-double divergence_difference_threshold = 0.1;             // threshold for the divergence difference value for optical flow object detection
+double div_diff = 0.f;                                   // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
+// int32_t divergence_threshold = 0;                     // threshold for the divergence value for optical flow object detection
+float divergence_difference_threshold_min = 0.1;         // threshold for the min divergence difference value for optical flow object detection
+float divergence_difference_threshold_max = 0.45;        // threshold for the max divergence difference value for optical flow object detection
 
-int32_t Kp = -140;                                        // Proportional gain for div_diff turning control
+int32_t Kp = -55;                                        // Proportional gain for div_diff turning control
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_div_diff = 0;           // a measure of how certain we are that the divergence difference is safe for optical flow
@@ -182,10 +183,14 @@ void orange_avoider_periodic(void)
   }
   
   // Div difference
-  if (fabs(div_diff) < divergence_difference_threshold) {
+  if (fabs(div_diff) < divergence_difference_threshold_min) {
     obstacle_free_confidence_div_diff++;
   } else {
-    obstacle_free_confidence_div_diff -= 5; // Be more cautious with positive obstacle detections
+    if (fabs(div_diff) > divergence_difference_threshold_max) {
+      obstacle_free_confidence_div_diff -= 0;
+    } else {
+      obstacle_free_confidence_div_diff -= 4; // Be more cautious with positive obstacle detections
+    }
   }
 
   // Bound obstacle_free_confidence_orange
@@ -203,7 +208,7 @@ void orange_avoider_periodic(void)
   ////// PRINT DETECTION VALUES //////
   // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
   // PRINT("[DIV_SIZE] Obstacle Free Confidence: %d; Divergence Size: %lf; Divergence Size Threshold: %lf \n", obstacle_free_confidence_div_size, div_size, divergence_threshold);
-  PRINT("[DIV_DIFF] Obstacle Free Confidence: %d; Divergence Difference: %lf; Divergence Difference Threshold: %lf \n", obstacle_free_confidence_div_diff, div_diff, divergence_difference_threshold);
+  PRINT("[DIV_DIFF] Obstacle Free Confidence: %d; Divergence Difference: %lf; Divergence Difference Threshold Min: %lf; Divergence Difference Threshold Max: %lf \n", obstacle_free_confidence_div_diff, div_diff, divergence_difference_threshold_min, divergence_difference_threshold_max);
 
   // Distance waypoint moves ahead of drone -> compares both orange avoider and optical flow confidences followed by the maxDistance comparison and takes the min value out of all of them
   float moveDistance_temp = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
@@ -275,7 +280,7 @@ void orange_avoider_periodic(void)
       }
 
       /////////////// DIV DIFF ///////////////
-      if (obstacle_free_confidence_div_diff >= 6) {
+      if (obstacle_free_confidence_div_diff >= 8) {
         navigation_state = SAFE;
       } else {
         increase_nav_heading(Kp * div_diff);
@@ -304,7 +309,6 @@ void orange_avoider_periodic(void)
         increase_nav_heading(heading_increment_CW);
         // Set confidence to 0
         obstacle_free_confidence_orange = 0;
-        obstacle_free_confidence_div_diff = 0;
         // Assume there is an obstacle to be safe (just in case)
         navigation_state = SEARCH_SAFE_HEADING;
       }

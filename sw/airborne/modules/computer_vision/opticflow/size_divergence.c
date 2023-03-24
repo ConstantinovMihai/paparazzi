@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #define PRINT(string,...) fprintf(stderr, "[size_divergence->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
-float moving_average_filter_div_diff(float current_value, float old_value);
+float moving_average_filter(float current_value, float old_value);
 bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x2, int32_t y1, int32_t y2);
 
 /**
@@ -56,8 +56,8 @@ bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x
 int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *filtered_vectors)
 {
     // Define factors for cropping in the horizontal and vertical axes
-    float h_factor = 0.3;
-    float w_factor = 0.5;
+    float h_factor = 0.7;
+    float w_factor = 1.0;
     float scale = 100;
 
     // Get all points of cropped image in original bounds -> Region of Interest
@@ -96,6 +96,11 @@ int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *fi
  * @param[in] n_samples  The number of line segments that will be taken into account. 0 means all line segments will be considered.
  * @return divergence
  */
+
+// Keep track of the old divergence difference for the moving average filter
+float divs_sum_difference_old = 0.f;
+float divs_sum_old = 0.f;
+bool F_FIRST_TIME_MOVING_FILTER = true;
 
 float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 {
@@ -169,18 +174,22 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
         return 0.f;
     }
 
-    // return the calculated mean divergence:
-    return divs_sum / used_samples;
-}
+    // Calculate mean divergence over used_samples
+    divs_sum = divs_sum / used_samples;
 
-float moving_average_filter_div_diff(float current_value, float old_value)
-{
-    return ((0.4*current_value) + (1-0.4)*old_value);
-}
+    // If this is the first time the function is called, set the old value to the new value
+    if (F_FIRST_TIME_MOVING_FILTER) {
+        divs_sum_old = divs_sum;
+        F_FIRST_TIME_MOVING_FILTER = false;
+    }
 
-// Keep track of the old divergence difference for the moving average filter
-float divs_sum_difference_old = 0.f;
-bool F_FIRST_TIME_MOVING_FILTER = true;
+    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
+    divs_sum = moving_average_filter(divs_sum, divs_sum_old);
+    divs_sum_old = divs_sum;
+
+    // return the calculated filtered divergence:
+    return divs_sum;
+}
 
 double get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
 {
@@ -250,9 +259,14 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
     }
 
     // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
-    divs_sum_difference = moving_average_filter_div_diff(divs_sum_difference, divs_sum_difference_old);
+    divs_sum_difference = moving_average_filter(divs_sum_difference, divs_sum_difference_old);
     divs_sum_difference_old = divs_sum_difference;
 
 
     return divs_sum_difference;
+}
+
+float moving_average_filter(float current_value, float old_value)
+{
+    return ((0.4*current_value) + (1-0.4)*old_value);
 }

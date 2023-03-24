@@ -161,6 +161,25 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
 //   div_diff = diff_divergence;
 // }
 
+// //// Receive ABI message from opticflow_module.c, where the divergence value is of interest
+// #ifndef OPTICAL_FLOW_ID
+// #define OPTICAL_FLOW_ID ABI_BROADCAST
+// #endif
+// static abi_event optical_flow_ev;
+// static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+//                             uint32_t __attribute__((unused)) stamp, 
+//                             int32_t __attribute__((unused)) flow_x,
+//                             int32_t __attribute__((unused)) flow_y,
+//                             int32_t __attribute__((unused)) flow_der_x,
+//                             int32_t __attribute__((unused)) flow_der_y,
+//                             float __attribute__((unused)) quality, 
+//                             float size_divergence,
+//                             double diff_divergence) 
+// {
+//   div_size = size_divergence;
+//   div_diff = diff_divergence;
+// }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     ////// RUN AUTOPILOT INIT FUNCTION //////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,8 +194,11 @@ void orange_avoider_init(void)
   //// Bind the colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
+  //// Bind the floor colorfilter callbacks to receive the color filter outputs
+  AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
+  
   //// Bind the optical flow callbacks to receive the divergence values
-  AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
+  // AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,6 +216,7 @@ void orange_avoider_periodic(void)
 
   // Compute colour thresholds:
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h; // Front_camera defined in airframe xml, with the video_capture module
+  int32_t floor_count_threshold = oa_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   // Orange avoider
@@ -201,24 +224,6 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange++;
   } else {
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
-  }
-  
-  // Div difference
-  if (fabs(div_diff) < divergence_difference_threshold_min) {
-    obstacle_free_confidence_div_diff++;
-  } else {
-    if (fabs(div_diff) > divergence_difference_threshold_max) {
-      obstacle_free_confidence_div_diff -= 0;
-    } else {
-      obstacle_free_confidence_div_diff -= 4; // Be more cautious with positive obstacle detections
-    }
-  }
-
-  // Div size
-  if (fabs(div_size) < divergence_threshold) {
-    obstacle_free_confidence_div_size++;
-  } else {
-    obstacle_free_confidence_div_size -= 1; // Be more cautious with positive obstacle detections
   }
 
   // Bound obstacle_free_confidence_orange
@@ -339,9 +344,6 @@ void orange_avoider_periodic(void)
       
       // Move waypoint forward
       moveWaypointForward(WP_TRAJECTORY, 2.1f);
-
-      // Set flag F_WAS_OUT_OF_BOUNDS to true
-      F_WAS_OUT_OF_BOUNDS = true;
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         // Add offset to head back into arena

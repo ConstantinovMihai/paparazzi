@@ -9,14 +9,18 @@ The avoidance strategy is to simply count the total number of orange pixels. Whe
 (given by color_count_frac) we assume that there is an obstacle and we turn.
 
 The color filter settings are set using the cv_detect_color_object. This module can run multiple filters simultaneously
-so you have to define which filter to use with the ORANGE_AVOIDER_VISUAL_DETECTION_ID setting.
-    </description>
+so you have to define which filter to use with the ORANGE_AVOIDER_VISUAL_DETECTION_ID setting.  When the total amount
+of green drops below a given threshold we detect an object and turn. The color detection is done by the cv_detect_color_object module, use the FLOOR_VISUAL_DETECTION_ID setting to 
+define which filter to use.
+      </description>
     <define name="ORANGE_AVOIDER_VISUAL_DETECTION_ID" value="ABI_BROADCAST" description="which VISUAL_DETECTION message to recieve for orange pole detection."/>
+    <define name="FLOOR_VISUAL_DETECTION_ID" value="ABI_BROADCAST" description="which VISUAL_DETECTION message to recieve for floor detection."/>
   </doc>
-    <settings>
+  <settings>
     <dl_settings>
       <dl_settings name="OrangeAvoider">
          <dl_setting var="oa_color_count_frac" min="0" step="0.01" max="0.5"/>
+         <dl_setting var="oa_floor_count_frac" min="0" step="0.01" max="0.5"/>
       </dl_settings>
     </dl_settings>
   </settings>

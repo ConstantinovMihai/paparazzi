@@ -204,10 +204,14 @@ void orange_avoider_periodic(void)
   }
   
   // Div difference
-  if (fabs(div_diff) < divergence_difference_threshold) {
+  if (fabs(div_diff) < divergence_difference_threshold_min) {
     obstacle_free_confidence_div_diff++;
   } else {
-    obstacle_free_confidence_div_diff -= 5; // Be more cautious with positive obstacle detections
+    if (fabs(div_diff) > divergence_difference_threshold_max) {
+      obstacle_free_confidence_div_diff -= 0;
+    } else {
+      obstacle_free_confidence_div_diff -= 4; // Be more cautious with positive obstacle detections
+    }
   }
 
   // Bound obstacle_free_confidence_orange

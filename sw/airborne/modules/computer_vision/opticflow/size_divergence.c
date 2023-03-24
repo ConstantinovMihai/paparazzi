@@ -56,8 +56,8 @@ bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x
 int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *filtered_vectors)
 {
     // Define factors for cropping in the horizontal and vertical axes
-    float h_factor = 0.7;
-    float w_factor = 1.0;
+    float h_factor = 0.3;
+    float w_factor = 0.5;
     float scale = 100;
 
     // Get all points of cropped image in original bounds -> Region of Interest

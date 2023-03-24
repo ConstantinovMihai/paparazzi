@@ -41,6 +41,7 @@
 #else
 #define VERBOSE_PRINT(...)
 #endif
+FILE *Green_Distance_Count;
 
 uint8_t chooseRandomIncrementAvoidance(void);
 
@@ -130,6 +131,10 @@ void orange_avoider_guided_periodic(void)
   VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
   VERBOSE_PRINT("Floor count: %d, threshold: %d\n", floor_count, floor_count_threshold);
   VERBOSE_PRINT("Floor centroid: %f\n", floor_centroid_frac);
+
+  Green_Distance_Count = fopen("green_dist_count.dat", "a+" );
+  fprintf(Green_Distance_Count, "%d \n", floor_count);
+  fclose(Green_Distance_Count);
 
   // update our safe confidence using color threshold
   if(color_count < color_count_threshold){

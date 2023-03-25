@@ -78,24 +78,39 @@ uint8_t cod_cb_max1_floor;
 uint8_t cod_cr_min1_floor;
 uint8_t cod_cr_max1_floor;
 
+
+
+
+////PART1/3: DEFINE THE SIGNATURE OF THE FUNCTION
 // define global variables
-// define new global variable for color_count; previously we only had one color_count which
-// was necessary to count the number of pixels that had the desired(orange color) included
-// the new color count is for the green floor
 struct color_object_t {
-    int32_t x_c;
-    int32_t y_c;
-    uint32_t color_count;
-    int32_t safe_heading;
-    int32_t safe_heading_confidence;
-    bool updated;
+  int32_t x_c;
+  int32_t y_c;
+  uint32_t color_count;
+  int32_t direction;
+  int32_t floor_color_count_img_segment;
+  bool updated;
 };
 struct color_object_t global_filters[2];
 
 
-// Function
+////// (NEW) define global variables for determining the direction in which the drone should go, straight ahead. left, right or go back
+//struct direction_decision_object_t {
+//    int32_t direction;
+//    int32_t floor_color_count_img_segment;
+//    bool updated;
+//};
+//struct direction_decision_object_t global_filters_floor[2];
+
+
+
+/// General function to detect the object centroid, initially implemented in cv_detect_color_object
+/// used later in the implementation of orange_avoider_guided (kept in case we decide to use later)
+/// Function (detects object centroid, color count of an object +
+/// improved with floor count + image segmentation to detect the direction(front, left right, back)
+/// if green color count is too low
 uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
-                              int32_t *safe_heading, int32_t *safe_heading_confidence,
+                              int32_t *direction, int32_t *floor_color_count_img_segment,
                               uint8_t lum_min, uint8_t lum_max,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max,
@@ -103,130 +118,153 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                               uint8_t cb_min_floor, uint8_t cb_max_floor,
                               uint8_t cr_min_floor, uint8_t cr_max_floor);
 
+
+
+/// Decide which camera to use
 /*
  * object_detector
  * @param img - input image to process
  * @param filter - which detection filter to process
  * @return img
  */
+/// FUNCTION signature to detect and object, to be called later on
+/// two different times once for the orange detector and once for the green dectector
 static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 {
-    uint8_t lum_min, lum_max;
-    uint8_t cb_min, cb_max;
-    uint8_t cr_min, cr_max;
-    bool draw;
-    uint8_t lum_min_floor, lum_max_floor;
-    uint8_t cb_min_floor, cb_max_floor;
-    uint8_t cr_min_floor, cr_max_floor;
+  uint8_t lum_min, lum_max;
+  uint8_t cb_min, cb_max;
+  uint8_t cr_min, cr_max;
+  bool draw;
+  uint8_t lum_min_floor, lum_max_floor;
+  uint8_t cb_min_floor, cb_max_floor;
+  uint8_t cr_min_floor, cr_max_floor;
 
-    switch (filter){
-        case 1:
-            lum_min = cod_lum_min1;
-            lum_max = cod_lum_max1;
-            cb_min = cod_cb_min1;
-            cb_max = cod_cb_max1;
-            cr_min = cod_cr_min1;
-            cr_max = cod_cr_max1;
-            //draw = cod_draw1;
+  switch (filter){
+    case 1:
+      lum_min = cod_lum_min1;
+      lum_max = cod_lum_max1;
+      cb_min = cod_cb_min1;
+      cb_max = cod_cb_max1;
+      cr_min = cod_cr_min1;
+      cr_max = cod_cr_max1;
+      //draw = cod_draw1;
 
-            lum_min_floor = cod_lum_min1_floor;
-            lum_max_floor = cod_lum_max1_floor;
-            cb_min_floor = cod_cb_min1_floor;
-            cb_max_floor = cod_cb_max1_floor;
-            cr_min_floor = cod_cr_min1_floor;
-            cr_max_floor = cod_cr_max1_floor;
-            draw = cod_draw1;
-            break;
-        case 2:
-            lum_min = cod_lum_min2;
-            lum_max = cod_lum_max2;
-            cb_min = cod_cb_min2;
-            cb_max = cod_cb_max2;
-            cr_min = cod_cr_min2;
-            cr_max = cod_cr_max2;
-            draw = cod_draw2;
-            break;
-        default:
-            return img;
-    };
+      lum_min_floor = cod_lum_min1_floor;
+      lum_max_floor = cod_lum_max1_floor;
+      cb_min_floor = cod_cb_min1_floor;
+      cb_max_floor = cod_cb_max1_floor;
+      cr_min_floor = cod_cr_min1_floor;
+      cr_max_floor = cod_cr_max1_floor;
+      draw = cod_draw1;
+      break;
+    case 2:
+      lum_min = cod_lum_min2;
+      lum_max = cod_lum_max2;
+      cb_min = cod_cb_min2;
+      cb_max = cod_cb_max2;
+      cr_min = cod_cr_min2;
+      cr_max = cod_cr_max2;
+      draw = cod_draw2;
+      break;
+    default:
+      return img;
+  };
 
-    int32_t x_c, y_c;
-    int32_t safe_heading;
-    int32_t safe_heading_confidence;
-    // Filter and find centroid
-    uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, &safe_heading, &safe_heading_confidence,lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor);
-    VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
-    VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
-                  hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
+  int32_t x_c, y_c;
+  /// (NEW) initialize the two variables needed
+  int32_t direction;
+  int32_t floor_color_count_img_segment;
 
-    pthread_mutex_lock(&mutex);
-    global_filters[filter-1].color_count = count;
-    global_filters[filter-1].x_c = x_c;
-    global_filters[filter-1].y_c = y_c;
-    global_filters[filter-1].safe_heading = safe_heading;
-    global_filters[filter-1].safe_heading_confidence = safe_heading_confidence;
-    global_filters[filter-1].updated = true;
-    pthread_mutex_unlock(&mutex);
+  // Filter and find centroid
+  uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, &direction, &floor_color_count_img_segment, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor);
+  VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
+  VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
+        hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
 
-    return img;
+  pthread_mutex_lock(&mutex);
+  global_filters[filter-1].color_count = count;
+  global_filters[filter-1].x_c = x_c;
+  global_filters[filter-1].y_c = y_c;
+  global_filters[filter-1].direction = direction;
+  global_filters[filter-1].floor_color_count_img_segment = floor_color_count_img_segment;
+  global_filters[filter-1].updated = true;
+  pthread_mutex_unlock(&mutex);
+
+  return img;
 }
 
+//// FRONT CAMERA INFORMATION
 struct image_t *object_detector1(struct image_t *img, uint8_t camera_id);
 struct image_t *object_detector1(struct image_t *img, uint8_t camera_id __attribute__((unused)))
 {
-    return object_detector(img, 1);
+  return object_detector(img, 1);
 }
 
+//// BOTTOM CAMERA INFORMATION (not used in this implementation)
 struct image_t *object_detector2(struct image_t *img, uint8_t camera_id);
 struct image_t *object_detector2(struct image_t *img, uint8_t camera_id __attribute__((unused)))
 {
-    return object_detector(img, 2);
+  return object_detector(img, 2);
 }
 
-void color_object_detector_init(void)
-{
-    memset(global_filters, 0, 2*sizeof(struct color_object_t));
+
+
+
+
+
+
+
+
+
+
+
+
+
+//// PART2/3: DEFINE THE ACTUALLY
+void color_object_detector_init(void) {
+    memset(global_filters, 0, 2 * sizeof(struct color_object_t));
     pthread_mutex_init(&mutex, NULL);
 #ifdef COLOR_OBJECT_DETECTOR_CAMERA1
-    #ifdef COLOR_OBJECT_DETECTOR_LUM_MIN1
-  cod_lum_min1 = COLOR_OBJECT_DETECTOR_LUM_MIN1;
-  cod_lum_max1 = COLOR_OBJECT_DETECTOR_LUM_MAX1;
-  cod_cb_min1 = COLOR_OBJECT_DETECTOR_CB_MIN1;
-  cod_cb_max1 = COLOR_OBJECT_DETECTOR_CB_MAX1;
-  cod_cr_min1 = COLOR_OBJECT_DETECTOR_CR_MIN1;
-  cod_cr_max1 = COLOR_OBJECT_DETECTOR_CR_MAX1;
+#ifdef COLOR_OBJECT_DETECTOR_LUM_MIN1
+    cod_lum_min1 = COLOR_OBJECT_DETECTOR_LUM_MIN1;
+    cod_lum_max1 = COLOR_OBJECT_DETECTOR_LUM_MAX1;
+    cod_cb_min1 = COLOR_OBJECT_DETECTOR_CB_MIN1;
+    cod_cb_max1 = COLOR_OBJECT_DETECTOR_CB_MAX1;
+    cod_cr_min1 = COLOR_OBJECT_DETECTOR_CR_MIN1;
+    cod_cr_max1 = COLOR_OBJECT_DETECTOR_CR_MAX1;
 
-
-  cod_lum_min1_floor = COLOR_OBJECT_DETECTOR_LUM_MIN1_FLOOR;
-  cod_lum_max1_floor = COLOR_OBJECT_DETECTOR_LUM_MAX1_FLOOR;
-  cod_cb_min1_floor = COLOR_OBJECT_DETECTOR_CB_MIN1_FLOOR;
-  cod_cb_max1_floor = COLOR_OBJECT_DETECTOR_CB_MAX1_FLOOR;
-  cod_cr_min1_floor = COLOR_OBJECT_DETECTOR_CR_MIN1_FLOOR;
-  cod_cr_max1_floor = COLOR_OBJECT_DETECTOR_CR_MAX1_FLOOR;
+    cod_lum_min1_floor = COLOR_OBJECT_DETECTOR_LUM_MIN2;
+    cod_lum_max1_floor = COLOR_OBJECT_DETECTOR_LUM_MAX2;
+    cod_cb_min1_floor = COLOR_OBJECT_DETECTOR_CB_MIN2;
+    cod_cb_max1_floor = COLOR_OBJECT_DETECTOR_CB_MAX2;
+    cod_cr_min1_floor = COLOR_OBJECT_DETECTOR_CR_MIN2;
+    cod_cr_max1_floor = COLOR_OBJECT_DETECTOR_CR_MAX2;
 #endif
 #ifdef COLOR_OBJECT_DETECTOR_DRAW1
-  cod_draw1 = COLOR_OBJECT_DETECTOR_DRAW1;
+    cod_draw1 = COLOR_OBJECT_DETECTOR_DRAW1;
 #endif
 
-  cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA1, object_detector1, COLOR_OBJECT_DETECTOR_FPS1, 0);
+    cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA1, object_detector1, COLOR_OBJECT_DETECTOR_FPS1, 0);
 #endif
 
+//// (NEW) Comment in if you want Bottom Cmaera
 #ifdef COLOR_OBJECT_DETECTOR_CAMERA2
-    #ifdef COLOR_OBJECT_DETECTOR_LUM_MIN2
-  cod_lum_min2 = COLOR_OBJECT_DETECTOR_LUM_MIN2;
-  cod_lum_max2 = COLOR_OBJECT_DETECTOR_LUM_MAX2;
-  cod_cb_min2 = COLOR_OBJECT_DETECTOR_CB_MIN2;
-  cod_cb_max2 = COLOR_OBJECT_DETECTOR_CB_MAX2;
-  cod_cr_min2 = COLOR_OBJECT_DETECTOR_CR_MIN2;
-  cod_cr_max2 = COLOR_OBJECT_DETECTOR_CR_MAX2;
+#ifdef COLOR_OBJECT_DETECTOR_LUM_MIN2
+    cod_lum_min2 = COLOR_OBJECT_DETECTOR_LUM_MIN2;
+    cod_lum_max2 = COLOR_OBJECT_DETECTOR_LUM_MAX2;
+    cod_cb_min2 = COLOR_OBJECT_DETECTOR_CB_MIN2;
+    cod_cb_max2 = COLOR_OBJECT_DETECTOR_CB_MAX2;
+    cod_cr_min2 = COLOR_OBJECT_DETECTOR_CR_MIN2;
+    cod_cr_max2 = COLOR_OBJECT_DETECTOR_CR_MAX2;
 #endif
 #ifdef COLOR_OBJECT_DETECTOR_DRAW2
-  cod_draw2 = COLOR_OBJECT_DETECTOR_DRAW2;
+    cod_draw2 = COLOR_OBJECT_DETECTOR_DRAW2;
 #endif
 
-  cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA2, object_detector2, COLOR_OBJECT_DETECTOR_FPS2, 1);
+    cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA2, object_detector2, COLOR_OBJECT_DETECTOR_FPS2, 1);
 #endif
 }
+
 
 /*
  * find_object_centroid
@@ -244,47 +282,45 @@ void color_object_detector_init(void)
  * @param cr_min - minimum cr value for the filter in YCbCr colorspace
  * @param cr_max - maximum cr value for the filter in YCbCr colorspace
  * @param draw - whether or not to draw on image
- * @param lum_min_floor - minimum y value for the filter in YCbCr colorspace(floor)
- * @param lum_max_floor - maximum y value for the filter in YCbCr colorspace(floor)
- * @param cb_min_floor - minimum cb value for the filter in YCbCr colorspace(floor)
- * @param cb_max_floor - maximum cb value for the filter in YCbCr colorspace(floor)
- * @param cr_min_floor - minimum cr value for the filter in YCbCr colorspace(floor)
- * @param cr_max_floor - maximum cr value for the filter in YCbCr colorspace(floor)
- * @param safe_heading - index of the image segment with the largest number of green pixels (-2, -1, 0, 1, 2)
- * @safe_heading_confidence - green count for the safest image segment returned
  * @return number of pixels of image within the filter bounds.
  */
-uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
-                              int32_t *safe_heading, int32_t *safe_heading_confidence,
-                              uint8_t lum_min, uint8_t lum_max,
-                              uint8_t cb_min, uint8_t cb_max,
-                              uint8_t cr_min, uint8_t cr_max,
-                              uint8_t lum_min_floor, uint8_t lum_max_floor,
-                              uint8_t cb_min_floor, uint8_t cb_max_floor,
-                              uint8_t cr_min_floor, uint8_t cr_max_floor)
+uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc, bool draw,
+                                  int32_t *direction, int32_t *floor_color_count_img_segment,
+                                  uint8_t lum_min, uint8_t lum_max,
+                                  uint8_t cb_min, uint8_t cb_max,
+                                  uint8_t cr_min, uint8_t cr_max,
+                                  uint8_t lum_min_floor, uint8_t lum_max_floor,
+                                  uint8_t cb_min_floor, uint8_t cb_max_floor,
+                                  uint8_t cr_min_floor, uint8_t cr_max_floor)
 {
-    uint32_t cnt = 0;
+    uint32_t cnt = 0; /// color count for obstacle i.e. orange
     uint32_t tot_x = 0;
     uint32_t tot_y = 0;
     uint8_t *buffer = img->buf;
 
-    // new inits
-    *safe_heading = 2;  // default 0; middle; negative = left; positive = right
-    int32_t cnt_green = 288;
-    int32_t heading_confidence_arr[5]; // array storing number of green pixels for each of the 5 segments of the photo
-    *safe_heading_confidence = cnt_green; //computes the number of green number of pixels per image segment
-    uint8_t th = 500; // threshold for green in the upper part of the image to detect passing over carpets; low obstacles
+    /// (NEW) define the new varialbes
+    *direction = 2; /// default 0; middle; negative = left; positive = right (to be scaled later)
+    //  int32_t cnt_green = 288;
+    int32_t img_segments = 3;
+    int32_t mid_segment = 1;
+    int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 5 segments of the photo
+    int32_t color_count_recommended_dir = 0; ///computes the number of green number of pixels per image segment
+    uint8_t thres_green = 2000; /// threshold for number of green pixels in the identified direction;
+    int32_t floor_threshold_per_segment = 10000000000;
 
     // iterate over all possible headings from the image
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < img_segments; i++)
+    {
         // Determine the start and end of each of the possible heading sections
         uint16_t start_x = (uint16_t) roundf(i * img->w / (float) 5);
         uint16_t end_x = (uint16_t) roundf((i + 1) * img->w / (float) 5);
         // reinitialize the green count per section
-        cnt_green = 0;
+        int32_t cnt_green = 0;
         // Go through all the pixels
-        for (uint16_t y = 0; y < img->h; y++) {
-            for (uint16_t x = start_x ; x < end_x; x++) {
+        for (uint16_t y = 0; y < img->h; y++)
+        {
+            for (uint16_t x = start_x; x < end_x; x++)
+            {
                 // Check if the color is inside the specified values
                 uint8_t *yp, *up, *vp;
                 if (x % 2 == 0) {
@@ -300,17 +336,28 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                     vp = &buffer[y * 2 * img->w + 2 * x];      // V
                     yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
                 }
+
+                /// GREEN/FLOOR
                 // if pixel is green count it for the total per section and make it black; maybe make it black
                 if ((*yp >= lum_min_floor) && (*yp <= lum_max_floor) &&
                     (*up >= cb_min_floor) && (*up <= cb_max_floor) &&
                     (*vp >= cr_min_floor) && (*vp <= cr_max_floor)) {
                     cnt_green++;
+                    /// Comment in if you want to DRAW white over detected pixels
                     // tot_x += x;
                     // tot_y += y;
                     // if (draw) {
                     //    *yp = 0;  // make pixel dark in the image
                     //}
                 }
+                /// Compute the green threshold per section
+                /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
+                // define settings
+                float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
+                float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
+                floor_threshold_per_segment = oag_floor_count_frac * img->w * (end_x - start_x);
+
+
                 // TO DO ADDITIONAL SECTION
                 // DETERMINE IF CURRENT MIDDLE SECTION = 2 HAS THE DESIRED THRESHOLD
                 // IF YES PASS ON THAT HEADING + ASSOCIATED COLOR COUNT
@@ -318,6 +365,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                 // DECIDE IN WHICH SIDE YOU WANT TO SAMPLE FURTHER
                 // PASS THE NEW HEADING + ASSOCIATED COLOR COUNT
 
+                /// ORANGE
                 // if pixel is orange count it for the total and make it white
                 if ((*yp >= lum_min) && (*yp <= lum_max) &&
                     (*up >= cb_min) && (*up <= cb_max) &&
@@ -331,8 +379,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                 }
             }
         }
-        //Compute the heading confidence per each of the five segments of the photo
-        heading_confidence_arr[i] = cnt_green;
+        //Compute the green color count per each of the segments of the photo
+        color_count_per_img_segment_arr[i] = cnt_green;
 
         // Compute centroid for orange detection
         if (cnt > 0) {
@@ -344,45 +392,55 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
         }
     }
 
-    // after you iterated over all 5 image segments
-    // Check if the default heading(2 - middle) is still safe or we need to change it
-    if (heading_confidence_arr[2] < th) {
-        uint8_t maxValue = heading_confidence_arr[2];
-        for (int j = 0; j < 5; j++) {
+    // after you iterated over all image segments
+    /// Check if the default heading(2 - middle) is still safe or we need to change it
+    if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment * 105 / 100) {
+        uint8_t maxValue = color_count_per_img_segment_arr[mid_segment];
+        for (int j = 0; j < img_segments; j++) {
             //Compare elements of array with max
-            if (heading_confidence_arr[j] > maxValue) {
-                maxValue = heading_confidence_arr[j];
-                *safe_heading = j-2; // change the index to center it around 0 with negative values = left; positive = right
-                *safe_heading_confidence = heading_confidence_arr[j];
+            if (color_count_per_img_segment_arr[j] > maxValue) {
+                maxValue = color_count_per_img_segment_arr[j];
+                *direction = j -
+                             mid_segment; // change the index to center it around 0 with negative values = left; positive = right
+                *floor_color_count_img_segment = color_count_per_img_segment_arr[j];
             }
         }
         // PRINT("TEST IN cv_detect_color_object");
-        // PRINT("safe_heading: %d  safe_heading_confidence: %d\n", safe_heading, safe_heading_confidence);
-    }else{
-        *safe_heading = 0; // return the values just for the straight heading
-        *safe_heading_confidence = heading_confidence_arr[2];
+        // PRINT("direction: %d  floor_color_count_img_segment: %d\n", direction, floor_color_count_img_segment);
+    } else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment) {
+        *direction = 404; // error turn back
+        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+    } else {
+        *direction = 0; // return the values just for the straight heading
+        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
     }
 
     return cnt;
+
 }
 
+//// PART 3/3: SEND MESSAGE TO NAVIGATION
 void color_object_detector_periodic(void)
 {
-    static struct color_object_t local_filters[2];
-    pthread_mutex_lock(&mutex);
-    memcpy(local_filters, global_filters, 2*sizeof(struct color_object_t));
-    pthread_mutex_unlock(&mutex);
+  static struct color_object_t local_filters[2];
+  pthread_mutex_lock(&mutex);
+  memcpy(local_filters, global_filters, 2*sizeof(struct color_object_t));
+  pthread_mutex_unlock(&mutex);
 
-    if(local_filters[0].updated){
-      PRINT("safe_heading: %d  safe_heading_confidence: %d\n", local_filters[0].safe_heading, local_filters[0].safe_heading_confidence);
-        
+  if(local_filters[0].updated){
+        PRINT("direction: %d  floor_color_count_img_segment: %d\n", local_filters[0].direction, local_filters[0].floor_color_count_img_segment);
+
         AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
-                                   0, 0, local_filters[0].color_count, local_filters[0].safe_heading, local_filters[0].safe_heading_confidence, 0);
+                                   0, 0, local_filters[0].color_count, local_filters[0].direction, local_filters[0].floor_color_count_img_segment, 0);
         local_filters[0].updated = false;
-    }
-    if(local_filters[1].updated){
+  }
+
+
+  /// Comment IN if you want bottom camera info
+  if(local_filters[1].updated){
         AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
-                                   0, 0, local_filters[1].color_count,local_filters[1].safe_heading, local_filters[1].safe_heading_confidence, 1);
+                                   0, 0, local_filters[1].color_count,local_filters[1].direction, local_filters[1].floor_color_count_img_segment, 1);
         local_filters[1].updated = false;
-    }
+  }
+
 }

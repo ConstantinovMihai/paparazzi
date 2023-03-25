@@ -181,7 +181,7 @@
       <field name="yaw"    type="float">Radio-Control Manual Yaw Setpoint</field>
     </message>
 
-    <message name="VISUAL_DETECTION" id="27">
+   <message name="VISUAL_DETECTION" id="27">
       <field name="pixel_x"      type="int16_t">Center pixel X</field>
       <field name="pixel_y"      type="int16_t">Center pixel Y</field>
       <field name="pixel_width"  type="int16_t">Width in pixels</field>

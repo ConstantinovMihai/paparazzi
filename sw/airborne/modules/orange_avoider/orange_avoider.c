@@ -194,9 +194,6 @@ void orange_avoider_init(void)
   //// Bind the colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
-  //// Bind the floor colorfilter callbacks to receive the color filter outputs
-  AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
-  
   //// Bind the optical flow callbacks to receive the divergence values
   // AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
@@ -216,7 +213,6 @@ void orange_avoider_periodic(void)
 
   // Compute colour thresholds:
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h; // Front_camera defined in airframe xml, with the video_capture module
-  int32_t floor_count_threshold = oa_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   ////// DETERMINE OBSTACLE FREE CONFIDENCE //////
   // Orange avoider

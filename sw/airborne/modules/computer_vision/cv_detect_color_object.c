@@ -334,7 +334,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
                 }
 
-                /// GREEN/FLOOR
+                /// GREEN/FLOOR/
                 // if pixel is green count it for the total per section and make it black; maybe make it black
                 if ((*yp >= lum_min_floor) && (*yp <= lum_max_floor) &&
                     (*up >= cb_min_floor) && (*up <= cb_max_floor) &&

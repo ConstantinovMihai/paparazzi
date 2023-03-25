@@ -19,8 +19,8 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="150"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="190"/>
 
-        <!-- Detect green -->
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="60"/>
+      <!-- Detect green/floor -->
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="60"/>  
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="130"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="75"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="110"/>
@@ -40,7 +40,7 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="134"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
 
-      <!-- Detect green -->
+      <!-- Detect green/floor -->
       <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="0"/>
@@ -87,13 +87,13 @@
     </module>
     <module name="cv_opticflow">
       <define name="OPTICFLOW_CAMERA" value="front_camera"/>
-      <define name="MAX_HORIZON" value="60"/>
-      <define name="OPTICFLOW_MAX_TRACK_CORNERS" value="20"/>
+      <define name="MAX_HORIZON" value="10"/>
+      <define name="OPTICFLOW_MAX_TRACK_CORNERS" value="100"/>
       <define name="OPTICFLOW_SUBPIXEL_FACTOR" value="200"/>
       <define name="OPTICFLOW_CORNER_METHOD" value="0"/>
-      <define name="OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X" value="1.2"/>
-      <define name="OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y" value="1.2"/>
-      <define name="MAX_TRACK_CORNERS" value="20"/>
+      <define name="OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X" value="0.8"/>
+      <define name="OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y" value="0.85"/>
+      <define name="MAX_TRACK_CORNERS" value="25"/>
     </module>
     <module name="video_rtp_stream">
       <define name="VIEWVIDEO_CAMERA" value="front_camera"/>

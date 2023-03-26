@@ -352,7 +352,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 // define settings
                 //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
                 float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
-                floor_threshold_per_segment = oag_floor_count_frac * img->h * (end_x - start_x);
+                floor_threshold_per_segment = oag_floor_count_frac * img->w * (end_x - start_x);
                 floor_threshold_per_segment_arr[i] = floor_threshold_per_segment;
 
 
@@ -392,20 +392,22 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
 
     // after you iterated over all image segments
  /// Check if the default heading(2 - middle) is still safe or we need to change it
-    if (color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[1] * 105 / 100){
+    if (color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[1] * 120 / 100){
         *direction = 0;
         *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    }else if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[1] * 105 / 100) {
-        //        *direction = 1;
+    }else if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[1] * 120 / 100) {
         //        *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
         /// check for max diraction
         int32_t max_dir;
         if (color_count_per_img_segment_arr[left_segment] >= color_count_per_img_segment_arr[right_segment]){
             max_dir = left_segment; // 0
         } else{
+            //PRINT("right more green");
             max_dir = right_segment; // 2
         }
-        if (color_count_per_img_segment_arr[max_dir] > floor_threshold_per_segment_arr[max_dir] * 105 / 100){
+        //        PRINT("TEST IN cv_detect_color_object");
+        //        PRINT("max direction: %d  \n", max_dir);
+        if (color_count_per_img_segment_arr[max_dir] > floor_threshold_per_segment_arr[max_dir]){
             *direction = max_dir - scaling; // change the index to center it around 0 with negative values = left; positive = right
             *floor_color_count_img_segment = color_count_per_img_segment_arr[max_dir];
         } else {
@@ -416,10 +418,12 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     } else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
         *direction = 404; // error turn back
         *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    } else {
-        *direction = 0; // return the values just for the straight heading
-        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
     }
+
+//    else {
+//        *direction = 0; // return the values just for the straight heading
+//        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//    }
 
         // PRINT("TEST IN cv_detect_color_object");
         // PRINT("direction: %d  floor_color_count_img_segment: %d\n", direction, floor_color_count_img_segment)

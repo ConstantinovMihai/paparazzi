@@ -288,7 +288,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                                   uint8_t cb_min_floor, uint8_t cb_max_floor,
                                   uint8_t cr_min_floor, uint8_t cr_max_floor)
 {
-    uint32_t cnt = 0; /// color count for obstacle i.e. orange
+    uint32_t cnt_orange = 0; /// color count for obstacle i.e. orange
     uint32_t tot_x = 0;
     uint32_t tot_y = 0;
     uint8_t *buffer = img->buf;
@@ -306,7 +306,6 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 5 segments of the photo
     int64_t floor_threshold_per_segment_arr[img_segments];
 
-    
     // iterate over all possible headings from the image
     for (int i = 0; i < img_segments; i++)
     {
@@ -321,33 +320,48 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
             for (uint16_t x = start_x; x < end_x; x++)
             {
                 // Check if the color is inside the specified values
-                uint8_t *yp, *up, *vp;
+                uint8_t *yp_green, *up_green, *vp_green;
                 if (x % 2 == 0) {
                     // Even x
-                    up = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // U
-                    yp = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y1
-                    vp = &buffer[y * 2 * (end_x-start_x) + 2 * x + 2];  // V
+                    up_green = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // U
+                    yp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y1
+                    vp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x + 2];  // V
                     //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
                 } else {
                     // Uneven x
-                    up = &buffer[y * 2 * (end_x-start_x) + 2 * x - 2];  // U
+                    up_green = &buffer[y * 2 * (end_x-start_x) + 2 * x - 2];  // U
                     //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-                    vp = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // V
-                    yp = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y2
+                    vp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // V
+                    yp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y2
+                }
+
+                uint8_t *yp_orange, *up_orange, *vp_orange;
+                if (x % 2 == 0) {
+                    // Even x
+                    up_orange = &buffer[y * 2 * img->w + 2 * x];      // U
+                    yp_orange = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+                    vp_orange = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                    //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+                } else {
+                    // Uneven x
+                    up_orange = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                    //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+                    vp_orange = &buffer[y * 2 * img->w + 2 * x];      // V
+                    yp_orange = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
                 }
 
                 /// GREEN/FLOOR/
                 // if pixel is green count it for the total per section and make it black; maybe make it black
-                if ((*yp >= lum_min_floor) && (*yp <= lum_max_floor) &&
-                    (*up >= cb_min_floor) && (*up <= cb_max_floor) &&
-                    (*vp >= cr_min_floor) && (*vp <= cr_max_floor)) {
+                if ((*yp_green >= lum_min_floor) && (*yp_green <= lum_max_floor) &&
+                    (*up_green >= cb_min_floor) && (*up_green <= cb_max_floor) &&
+                    (*vp_green >= cr_min_floor) && (*vp_green <= cr_max_floor)) {
                     cnt_green++;
                     /// Comment in if you want to DRAW white over detected pixels
                     // tot_x += x;
                     // tot_y += y;
                     // if (draw) {
-                    //    *yp = 0;  // make pixel dark in the image
-                    //}
+                    //    *yp_green = 0;  // make pixel dark in the image
+                    // }
                 }
 
                 // TO DO ADDITIONAL SECTION
@@ -359,15 +373,15 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
 
                 /// ORANGE
                 // if pixel is orange count it for the total and make it white
-                if ((*yp >= lum_min) && (*yp <= lum_max) &&
-                    (*up >= cb_min) && (*up <= cb_max) &&
-                    (*vp >= cr_min) && (*vp <= cr_max)) {
-                    cnt++;
-                    tot_x += x;
-                    tot_y += y;
-                    if (draw) {
-                        *yp = 255;  // make pixel brighter in image
-                    }
+                if ((*yp_orange >= lum_min) && (*yp_orange <= lum_max) &&
+                    (*up_orange >= cb_min) && (*up_orange <= cb_max) &&
+                    (*vp_orange >= cr_min) && (*vp_orange <= cr_max)) {
+                    cnt_orange++;
+                    // tot_x += x;
+                    // tot_y += y;
+                    // if (draw) {
+                    //     *yp_orange = 255;  // make pixel brighter in image
+                    // }
                 }
             }
         }
@@ -378,9 +392,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         color_count_per_img_segment_arr[i] = cnt_green;
 
         // Compute centroid for orange detection
-        if (cnt > 0) {
-            *p_xc = (int32_t) roundf(tot_x / ((float) cnt) - img->w * 0.5f);
-            *p_yc = (int32_t) roundf(img->h * 0.5f - tot_y / ((float) cnt));
+        if (cnt_orange > 0) {
+            *p_xc = (int32_t) roundf(tot_x / ((float) cnt_orange) - img->w * 0.5f);
+            *p_yc = (int32_t) roundf(img->h * 0.5f - tot_y / ((float) cnt_orange));
         } else {
             *p_xc = 0;
             *p_yc = 0;
@@ -397,14 +411,26 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t maxIndex = 404;
 
     // check if the maximum color count is above the threshold and find the direction with the maximum color count
-    for (int j = 0; j < img_segments; j++) {
-        if (color_count_per_img_segment_arr[j] >= maxValue && color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]*120/100) {
-            maxValue = color_count_per_img_segment_arr[j];
-            maxIndex = j;
+    if (color_count_per_img_segment_arr[0]>= floor_threshold_per_segment_arr[0]*130/100) {
+        maxIndex=1;
+    } else {
+        for (int j = 0; j < img_segments; j++) {
+            if (color_count_per_img_segment_arr[j] >= maxValue) {
+                maxValue = color_count_per_img_segment_arr[j];
+                maxIndex = 404;
+            }
+            
+            if (color_count_per_img_segment_arr[j] >= maxValue && color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]) {
+                maxValue = color_count_per_img_segment_arr[j];
+                maxIndex = 404;
+            } else {
+                maxIndex = j;
+            }
         }
     }
-    // PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
-    // PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+
+    PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+    PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
     // set output variables
     if (maxIndex == 0) {
         *direction = -1;
@@ -456,7 +482,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         // PRINT("direction: %d  floor_color_count_img_segment: %d\n", direction, floor_color_count_img_segment)
 
 
-    return cnt;
+    return cnt_orange;
 
 }
 

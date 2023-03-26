@@ -322,16 +322,16 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 uint8_t *yp, *up, *vp;
                 if (x % 2 == 0) {
                     // Even x
-                    up = &buffer[y * 2 * img->w + 2 * x];      // U
-                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
-                    vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                    up = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // U
+                    yp = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y1
+                    vp = &buffer[y * 2 * (end_x-start_x) + 2 * x + 2];  // V
                     //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
                 } else {
                     // Uneven x
-                    up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                    up = &buffer[y * 2 * (end_x-start_x) + 2 * x - 2];  // U
                     //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-                    vp = &buffer[y * 2 * img->w + 2 * x];      // V
-                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+                    vp = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // V
+                    yp = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y2
                 }
 
                 /// GREEN/FLOOR/
@@ -351,7 +351,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
                 // define settings
                 //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
-                float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
+                float oag_floor_count_frac = 0.1f;       // floor detection threshold as a fraction of total of image
                 floor_threshold_per_segment = oag_floor_count_frac * img->w * (end_x - start_x);
                 floor_threshold_per_segment_arr[i] = floor_threshold_per_segment;
 
@@ -391,34 +391,71 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     }
 
     // after you iterated over all image segments
- /// Check if the default heading(2 - middle) is still safe or we need to change it
-    if (color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[1] * 120 / 100){
-        *direction = 0;
-        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    }else if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[1] * 120 / 100) {
-        //        *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
-        /// check for max diraction
-        int32_t max_dir;
-        if (color_count_per_img_segment_arr[left_segment] >= color_count_per_img_segment_arr[right_segment]){
-            max_dir = left_segment; // 0
-        } else{
-            //PRINT("right more green");
-            max_dir = right_segment; // 2
-        }
-        //        PRINT("TEST IN cv_detect_color_object");
-        //        PRINT("max direction: %d  \n", max_dir);
-        if (color_count_per_img_segment_arr[max_dir] > floor_threshold_per_segment_arr[max_dir]){
-            *direction = max_dir - scaling; // change the index to center it around 0 with negative values = left; positive = right
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[max_dir];
-        } else {
-            *direction = 404; // error turn back
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-        }
+    /// Check if the default heading(2 - middle) is still safe or we need to change it
+    /// assume max is mid segment
+    /// check if it's actually the mid segment and if it's above the threshold
+    /// get the direction with max value above threshold ig you cant find return 404
 
-    } else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
-        *direction = 404; // error turn back
-        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+
+
+    int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
+    int32_t maxIndex = mid_segment;
+
+    // check if the maximum color count is above the threshold and find the direction with the maximum color count
+    for (int j = 0; j < img_segments; j++) {
+        if (color_count_per_img_segment_arr[j] >= maxValue && color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]) {
+            maxValue = color_count_per_img_segment_arr[j];
+            maxIndex = j;
+        }else{
+            maxIndex = 404;
+        }
     }
+    PRINT("S-1 %d, S0 %d, S1 %d \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+    PRINT("TH-1 %d, TH0 %d, TH1 %d \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+    // set output variables
+    if (maxIndex == 0) {
+        *direction = -1;
+    } else if (maxIndex == 1) {
+        *direction = 0;
+    } else if (maxIndex == 2) {
+        *direction = 1;
+    } else {
+        *direction = 404; // error turn back
+    }
+    *floor_color_count_img_segment = maxValue;
+
+    // print output variables
+    //PRINT("direction: %d  floor_color_count_img_segment: %d\n", *direction, *floor_color_count_img_segment);
+
+
+
+
+//    if (color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[1] * 120 / 100){
+//        *direction = 0;
+//        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//    }else if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[1] * 120 / 100) {
+//        //        *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
+//        /// check for max direction
+//        int32_t max_dir;
+//        //PRINT("MID APPROACHES THRESHOLD: %d\n", color_count_per_img_segment_arr);
+//        if (color_count_per_img_segment_arr[left_segment] > color_count_per_img_segment_arr[right_segment]){
+//            max_dir = left_segment; // 0
+//        } else{
+//            max_dir = right_segment; // 2
+//        }
+//        PRINT("max_dir: %d\n", max_dir);
+//        if (color_count_per_img_segment_arr[max_dir] > floor_threshold_per_segment_arr[max_dir]){
+//            *direction = max_dir - scaling; // change the index to center it around 0 with negative values = left; positive = right
+//            *floor_color_count_img_segment = color_count_per_img_segment_arr[max_dir];
+//        } else {
+//            *direction = 404; // error turn back
+//            *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//        }
+//
+//    } else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
+//        *direction = 404; // error turn back
+//        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//    }
 
 //    else {
 //        *direction = 0; // return the values just for the straight heading

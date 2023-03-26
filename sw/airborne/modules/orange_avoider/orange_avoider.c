@@ -67,7 +67,7 @@ uint8_t chooseRandomIncrementAvoidance(void);
 enum navigation_state_t {
   SAFE,
   SEARCH_SAFE_HEADING,
-  RETURN,
+  TURN_AROUND,
   OUT_OF_BOUNDS,
 };
 
@@ -206,11 +206,11 @@ void orange_avoider_periodic(void)
   Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange);
 
   ////// PRINT DETECTION VALUES //////
-  // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
+  PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
   // PRINT("[GREEN] Counter No Green: %d; Green Count: %d; Green Threshold: %d \n", C_ROBUST_NO_GREEN, floor_count, floor_count_threshold); // Print visual detection pixel colour values.
 
   // Print safe heading green
-  PRINT("[GREEN] Safe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
+  PRINT("[GREEN] SafeSafe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
 
   // Print obstacle free confidence orange
   //PRINT("[ORANGE] Obstacle Free Confidence: %d \n", obstacle_free_confidence_orange); // Print visual detection pixel colour values and navigation state
@@ -233,8 +233,9 @@ void orange_avoider_periodic(void)
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) 
       {
         navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence_orange == 0) 
-      {
+      } else if (safe_heading_green == 404) {
+        navigation_state = TURN_AROUND;
+      } else if (obstacle_free_confidence_orange == 0) {
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = ORANGE;
       } else if (abs(safe_heading_green) == 1) 
@@ -265,7 +266,7 @@ void orange_avoider_periodic(void)
       break;
     case SEARCH_SAFE_HEADING:
       if (previous_state != navigation_state) {
-        //PRINT("[STATE] Search Safe Heading [CALLED BY] %d", search_safe_heading_state);
+        PRINT("[STATE] Search Safe Heading [CALLED BY] %d", search_safe_heading_state);
       }
 
       // Stop
@@ -286,7 +287,7 @@ void orange_avoider_periodic(void)
         case GREEN:
           // Stop
           guidance_h_set_body_vel(0, 0);
-          /////////////// NO GREEN DETECTOR ///////////////
+          /////////////// NO-GREEN DETECTOR ///////////////
           increase_nav_heading(safe_heading_green * heading_magnitude);
           // Turn if there is an obstacle detected with green detector
           if (abs(safe_heading_green) == 0) 
@@ -297,7 +298,19 @@ void orange_avoider_periodic(void)
         default:
           break;
       }
-      break; 
+      break;
+    case TURN_AROUND:
+      // Stop
+      guidance_h_set_body_vel(0, 0);
+      
+      // Turn CW
+      increase_nav_heading(5.f);
+
+      if (safe_heading_green != 404) {
+        navigation_state = SAFE;
+      }
+
+      break;
     case OUT_OF_BOUNDS:
       // Stop
       guidance_h_set_body_vel(0, 0);

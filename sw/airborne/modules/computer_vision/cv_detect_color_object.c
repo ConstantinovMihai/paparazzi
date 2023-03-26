@@ -179,7 +179,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 
   int32_t x_c, y_c;
   /// (NEW) initialize the two variables needed
-  int32_t direction;
+  int32_t direction = 0;
   int32_t floor_color_count_img_segment;
 
   // Filter and find centroid
@@ -288,77 +288,81 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                                   uint8_t cb_min_floor, uint8_t cb_max_floor,
                                   uint8_t cr_min_floor, uint8_t cr_max_floor)
 {
-    uint32_t cnt = 0; /// color count for obstacle i.e. orange
+    uint32_t cnt_orange = 0; /// color count for obstacle i.e. orange
     uint32_t tot_x = 0;
     uint32_t tot_y = 0;
     uint8_t *buffer = img->buf;
 
     /// (NEW) define the new varialbes
-    // *direction = 0; /// default 0; middle; negative = left; positive = right (to be scaled later)
+    //*direction ; /// default 0; middle; negative = left; positive = right (to be scaled later)
     //  int32_t cnt_green = 288;
     int32_t img_segments = 3;
-    int32_t left_segment = 0;
     int32_t mid_segment = 1;
-    int32_t right_segment = 2;
     int32_t cnt_green = 0;
-    int32_t maxValue;
-    float oag_floor_count_frac = 0.07f;       // floor detection threshold as a fraction of total of image
-    int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 3 segments of the photo
+    
+    // define settings
+    //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
+    float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
+    int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 5 segments of the photo
     int64_t floor_threshold_per_segment_arr[img_segments];
 
     // iterate over all possible headings from the image
     for (int i = 0; i < img_segments; i++)
     {
         // Determine the start and end of each of the possible heading sections
-        uint16_t start_x = (uint16_t) roundf(i * img->h / (float) 3);
-        uint16_t end_x = (uint16_t) roundf((i + 1) * img->h / (float) 3);
-        // PRINT("segment %d: start_x = %d, end_x = %d", i, start_x, end_x);
+        uint16_t start_x = (uint16_t) roundf(i * img->w / (float) img_segments);
+        uint16_t end_x = (uint16_t) roundf((i + 1) * img->w / (float) img_segments);
+        // reinitialize the green count per section
         cnt_green = 0;
-        
         // Go through all the pixels
-        for (uint32_t y = 0; y < img->w; y++)
+        for (uint32_t y = 0; y < img->h; y++)
         {
             for (uint16_t x = start_x; x < end_x; x++)
             {
                 // Check if the color is inside the specified values
-                uint8_t *yp, *up, *vp;
+                uint8_t *yp_green, *up_green, *vp_green;
                 if (x % 2 == 0) {
-                    // Even xh
-                    up = &buffer[y * 2 * img->w + 2 * x];      // U
-                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
-                    vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                    // Even x
+                    up_green = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // U
+                    yp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y1
+                    vp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x + 2];  // V
                     //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
                 } else {
                     // Uneven x
-                    up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                    up_green = &buffer[y * 2 * (end_x-start_x) + 2 * x - 2];  // U
                     //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-                    vp = &buffer[y * 2 * img->w + 2 * x];      // V
-                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+                    vp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x];      // V
+                    yp_green = &buffer[y * 2 * (end_x-start_x) + 2 * x + 1];  // Y2
+                }
+
+                uint8_t *yp_orange, *up_orange, *vp_orange;
+                if (x % 2 == 0) {
+                    // Even x
+                    up_orange = &buffer[y * 2 * img->w + 2 * x];      // U
+                    yp_orange = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+                    vp_orange = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                    //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+                } else {
+                    // Uneven x
+                    up_orange = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                    //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+                    vp_orange = &buffer[y * 2 * img->w + 2 * x];      // V
+                    yp_orange = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
                 }
 
                 /// GREEN/FLOOR/
                 // if pixel is green count it for the total per section and make it black; maybe make it black
-                if ((*yp >= lum_min_floor) && (*yp <= lum_max_floor) &&
-                    (*up >= cb_min_floor) && (*up <= cb_max_floor) &&
-                    (*vp >= cr_min_floor) && (*vp <= cr_max_floor)) {
+                if ((*yp_green >= lum_min_floor) && (*yp_green <= lum_max_floor) &&
+                    (*up_green >= cb_min_floor) && (*up_green <= cb_max_floor) &&
+                    (*vp_green >= cr_min_floor) && (*vp_green <= cr_max_floor)) {
                     cnt_green++;
                     /// Comment in if you want to DRAW white over detected pixels
                     // tot_x += x;
                     // tot_y += y;
                     // if (draw) {
-                    //    *yp = 0;  // make pixel dark in the image
-                    //}
-                    // Make the pixel black
-                    *yp = 0;
-
+                    //    *yp_green = 0;  // make pixel dark in the image
+                    // }
                 }
-                /// Compute the green threshold per section
-                /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
-                // define settings
-                //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
-                // floor_threshold_per_segment = 
-                
-
 
                 // TO DO ADDITIONAL SECTION
                 // DETERMINE IF CURRENT MIDDLE SECTION = 2 HAS THE DESIRED THRESHOLD
@@ -369,69 +373,118 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
 
                 /// ORANGE
                 // if pixel is orange count it for the total and make it white
-                if ((*yp >= lum_min) && (*yp <= lum_max) &&
-                    (*up >= cb_min) && (*up <= cb_max) &&
-                    (*vp >= cr_min) && (*vp <= cr_max)) {
-                    cnt++;
-                    tot_x += x;
-                    tot_y += y;
+                if ((*yp_orange >= lum_min) && (*yp_orange <= lum_max) &&
+                    (*up_orange >= cb_min) && (*up_orange <= cb_max) &&
+                    (*vp_orange >= cr_min) && (*vp_orange <= cr_max)) {
+                    cnt_orange++;
+                    // tot_x += x;
+                    // tot_y += y;
                     // if (draw) {
-                    //     *yp = 255;  // make pixel brighter in image
+                    //     *yp_orange = 255;  // make pixel brighter in image
                     // }
                 }
             }
         }
+        /// Compute the green threshold per section
+        /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
         floor_threshold_per_segment_arr[i] = oag_floor_count_frac * img->w * (end_x - start_x);
         //Compute the green color count per each of the segments of the photo
         color_count_per_img_segment_arr[i] = cnt_green;
 
         // Compute centroid for orange detection
-        if (cnt > 0) {
-            *p_xc = (int32_t) roundf(tot_x / ((float) cnt) - img->w * 0.5f);
-            *p_yc = (int32_t) roundf(img->h * 0.5f - tot_y / ((float) cnt));
+        if (cnt_orange > 0) {
+            *p_xc = (int32_t) roundf(tot_x / ((float) cnt_orange) - img->w * 0.5f);
+            *p_yc = (int32_t) roundf(img->h * 0.5f - tot_y / ((float) cnt_orange));
         } else {
             *p_xc = 0;
             *p_yc = 0;
         }
     }
 
-    // Print all values of the color count per segment and the threshold per segment
-    PRINT("left: %d/%d, mid: %d/%d, right: %d/%d \n", color_count_per_img_segment_arr[left_segment], floor_threshold_per_segment_arr[left_segment], color_count_per_img_segment_arr[mid_segment], floor_threshold_per_segment_arr[mid_segment], color_count_per_img_segment_arr[right_segment], floor_threshold_per_segment_arr[right_segment]);
-
-    // Go through all the cases
-
-
     // after you iterated over all image segments
- /// Check if the default heading(2 - middle) is still safe or we need to change it
-    if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[mid_segment]) { // * (1.05f) && color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[mid_segment] * (0.95f)) {
-        maxValue = color_count_per_img_segment_arr[mid_segment];
-        if (color_count_per_img_segment_arr[right_segment] > maxValue) { //&& color_count_per_img_segment_arr[right_segment] > floor_threshold_per_segment_arr[right_segment])  {
-            // PRINT("[IF STAMENT FOR SAFE_HEADING=1]");
-            //maxValue = color_count_per_img_segment_arr[0];
-            *direction = 1; // change the index to center it around 0 with negative values = left; positive = right
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
-        } else if (color_count_per_img_segment_arr[left_segment] > maxValue) { // && color_count_per_img_segment_arr[left_segment] > floor_threshold_per_segment_arr[left_segment]) { // && color_count_per_img_segment_arr[left_segment] > floor_threshold_per_segment_arr[left_segment] * 105 / 100) {
-            //maxValue = color_count_per_img_segment_arr[0];
-            *direction = -1; // change the index to center it around 0 with negative values = left; positive = right
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[left_segment];
-        } else {
-            *direction = 404; // return back (180 degrees)
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+    /// Check if the default heading(2 - middle) is still safe or we need to change it
+    /// assume max is mid segment
+    /// check if it's actually the mid segment and if it's above the threshold
+    /// get the direction with max value above threshold ig you cant find return 404
+
+    int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
+    int32_t maxIndex = 404;
+
+    // check if the maximum color count is above the threshold and find the direction with the maximum color count
+    if (color_count_per_img_segment_arr[0]>= floor_threshold_per_segment_arr[0]*130/100) {
+        maxIndex = 1;
+    } else {
+        for (int j = 0; j < img_segments; j++) {
+            if (color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]) {
+                if (color_count_per_img_segment_arr[j] >= maxValue) {
+                    maxValue = color_count_per_img_segment_arr[j];
+                    maxIndex = j;
+                }
+            }
+
+            if (color_count_per_img_segment_arr[j] >= maxValue) { //&& color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]) {
+                maxValue = color_count_per_img_segment_arr[j];
+                maxIndex = j;
+            } else if (color_count_per_img_segment_arr[0] < floor_threshold_per_segment_arr[0] && color_count_per_img_segment_arr[1] < floor_threshold_per_segment_arr[1] && color_count_per_img_segment_arr[2] < floor_threshold_per_segment_arr[2]) {
+                maxIndex = 404;                
+            }
         }
     }
+
+    PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+    PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+    // set output variables
+    if (maxIndex == 0) {
+        *direction = -1;
+    } else if (maxIndex == 1) {
+        *direction = 0;
+    } else if (maxIndex == 2) {
+        *direction = 1;
+    } else {
+        *direction = 404; // error turn back
+    }
+    *floor_color_count_img_segment = maxValue;
+
+
+
+
+//    if (color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[1] * 120 / 100){
+//        *direction = 0;
+//        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//    }else if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[1] * 120 / 100) {
+//        //        *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
+//        /// check for max direction
+//        int32_t max_dir;
+//        //PRINT("MID APPROACHES THRESHOLD: %d\n", color_count_per_img_segment_arr);
+//        if (color_count_per_img_segment_arr[left_segment] > color_count_per_img_segment_arr[right_segment]){
+//            max_dir = left_segment; // 0
+//        } else{
+//            max_dir = right_segment; // 2
+//        }
+//        PRINT("max_dir: %d\n", max_dir);
+//        if (color_count_per_img_segment_arr[max_dir] > floor_threshold_per_segment_arr[max_dir]){
+//            *direction = max_dir - scaling; // change the index to center it around 0 with negative values = left; positive = right
+//            *floor_color_count_img_segment = color_count_per_img_segment_arr[max_dir];
+//        } else {
+//            *direction = 404; // error turn back
+//            *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//        }
+//
+//    } else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
+//        *direction = 404; // error turn back
+//        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//    }
+
+//    else {
+//        *direction = 0; // return the values just for the straight heading
+//        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+//    }
+
         // PRINT("TEST IN cv_detect_color_object");
         // PRINT("direction: %d  floor_color_count_img_segment: %d\n", direction, floor_color_count_img_segment)
-        
-    // else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
-    //   *direction = 404; // error turn back
-    //   *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    // } 
-    else {
-      *direction = 0; // return the values just for the straight heading
-      *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    }
 
-    return cnt;
+
+    return cnt_orange;
 
 }
 
@@ -450,7 +503,6 @@ void color_object_detector_periodic(void)
                                    0, 0, local_filters[0].color_count, local_filters[0].direction, local_filters[0].floor_color_count_img_segment, 0);
         local_filters[0].updated = false;
   }
-
 
   /// Comment IN if you want bottom camera info
   if(local_filters[1].updated){

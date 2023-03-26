@@ -302,7 +302,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t right_segment = 2;
     int32_t cnt_green = 0;
     int32_t maxValue;
-    float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
+    float oag_floor_count_frac = 0.07f;       // floor detection threshold as a fraction of total of image
     int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 3 segments of the photo
     int64_t floor_threshold_per_segment_arr[img_segments];
 
@@ -312,7 +312,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         // Determine the start and end of each of the possible heading sections
         uint16_t start_x = (uint16_t) roundf(i * img->h / (float) 3);
         uint16_t end_x = (uint16_t) roundf((i + 1) * img->h / (float) 3);
-        
+        // PRINT("segment %d: start_x = %d, end_x = %d", i, start_x, end_x);
         cnt_green = 0;
         
         // Go through all the pixels
@@ -324,16 +324,16 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 uint8_t *yp, *up, *vp;
                 if (x % 2 == 0) {
                     // Even xh
-                    up = &buffer[y * 2 * img->h + 2 * x];      // U
-                    yp = &buffer[y * 2 * img->h + 2 * x + 1];  // Y1
-                    vp = &buffer[y * 2 * img->h + 2 * x + 2];  // V
+                    up = &buffer[y * 2 * img->w + 2 * x];      // U
+                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+                    vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
                     //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
                 } else {
                     // Uneven x
-                    up = &buffer[y * 2 * img->h + 2 * x - 2];  // U
+                    up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
                     //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-                    vp = &buffer[y * 2 * img->h + 2 * x];      // V
-                    yp = &buffer[y * 2 * img->h + 2 * x + 1];  // Y2
+                    vp = &buffer[y * 2 * img->w + 2 * x];      // V
+                    yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
                 }
 
                 /// GREEN/FLOOR/
@@ -348,6 +348,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     // if (draw) {
                     //    *yp = 0;  // make pixel dark in the image
                     //}
+                    // Make the pixel black
+                    *yp = 0;
+
                 }
                 /// Compute the green threshold per section
                 /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
@@ -372,9 +375,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     cnt++;
                     tot_x += x;
                     tot_y += y;
-                    if (draw) {
-                        *yp = 255;  // make pixel brighter in image
-                    }
+                    // if (draw) {
+                    //     *yp = 255;  // make pixel brighter in image
+                    // }
                 }
             }
         }
@@ -391,6 +394,12 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
             *p_yc = 0;
         }
     }
+
+    // Print all values of the color count per segment and the threshold per segment
+    PRINT("left: %d/%d, mid: %d/%d, right: %d/%d \n", color_count_per_img_segment_arr[left_segment], floor_threshold_per_segment_arr[left_segment], color_count_per_img_segment_arr[mid_segment], floor_threshold_per_segment_arr[mid_segment], color_count_per_img_segment_arr[right_segment], floor_threshold_per_segment_arr[right_segment]);
+
+    // Go through all the cases
+
 
     // after you iterated over all image segments
  /// Check if the default heading(2 - middle) is still safe or we need to change it

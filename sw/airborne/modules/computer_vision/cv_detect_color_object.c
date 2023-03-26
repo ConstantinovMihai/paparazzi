@@ -351,7 +351,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
                 // define settings
                 //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
-                float oag_floor_count_frac = 0.1f;       // floor detection threshold as a fraction of total of image
+                float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
                 floor_threshold_per_segment = oag_floor_count_frac * img->w * (end_x - start_x);
                 floor_threshold_per_segment_arr[i] = floor_threshold_per_segment;
 
@@ -399,15 +399,13 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
 
 
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
-    int32_t maxIndex = mid_segment;
+    int32_t maxIndex = 404;
 
     // check if the maximum color count is above the threshold and find the direction with the maximum color count
     for (int j = 0; j < img_segments; j++) {
         if (color_count_per_img_segment_arr[j] >= maxValue && color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]) {
             maxValue = color_count_per_img_segment_arr[j];
             maxIndex = j;
-        }else{
-            maxIndex = 404;
         }
     }
     PRINT("S-1 %d, S0 %d, S1 %d \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);

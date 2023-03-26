@@ -437,33 +437,37 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// assume max is mid segment
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
-
+    float detectionTolerance = 2.0f;
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
-    int32_t maxIndex = 404;
-    int32_t above_th_arr[img_segments];
-    for (int j = 0; j < img_segments; j++) {
-        if (color_count_per_img_segment_arr[j] > floor_threshold_per_segment_arr[j]*130/100) {
-            above_th_arr[j] = 1;
-        } else {
-            above_th_arr[j] = 0;
-        }
-    }    
-    // check if the maximum color count is above the threshold and find the direction with the maximum color count
-    if (color_count_per_img_segment_arr[mid_segment]>= floor_threshold_per_segment_arr[mid_segment]*130/100) {
-        maxIndex = 1;
-    } else {
-        // for values in arra above th i choose max out of them
-        // for values below i return 404
-        for (int j=0; j<img_segments; j++){
-            if (above_th_arr[j] == 1 && color_count_per_img_segment_arr[j] > maxValue){
-                maxValue = color_count_per_img_segment_arr[j];
-                maxIndex = j;
-            } else{
-                maxIndex = 404;
-            }
-        }
+    int32_t minValue = color_count_per_img_segment_arr[mid_segment];
+    int32_t maxIndex = 1;
+    bool atLeastOneAboveTh = false;
+    int32_t margin_between_min_max = 50;
+    bool above_th_arr[img_segments];
+    
+    // Check if the maximum color count is above the threshold and find the direction with the maximum color count
+    for (int i = 0; i < img_segments; i++) {
+        above_th_arr[i] = color_count_per_img_segment_arr[i] >= floor_threshold_per_segment_arr[i]*detectionTolerance;
+    }
 
-            
+    for (int i = 0; i < img_segments; i++) {
+        if (above_th_arr[i] == true) {
+            atLeastOneAboveTh = true;
+        }
+        if (above_th_arr[i] == true && color_count_per_img_segment_arr[i] > maxValue){
+            maxValue = color_count_per_img_segment_arr[i];
+            maxIndex = i;
+        } else if (atLeastOneAboveTh == false && color_count_per_img_segment_arr[i] > maxValue) {
+            maxValue = color_count_per_img_segment_arr[i];
+            maxIndex = i;
+        }
+        if (color_count_per_img_segment_arr[i] <= minValue) {
+            minValue = color_count_per_img_segment_arr[i];
+        }
+    }
+    // If the margin between min and max is too low, then set direction = 404
+    if (atLeastOneAboveTh == false && (maxValue - minValue) < margin_between_min_max) {
+        maxIndex = 3; // corresponds to 404 direction value (other than 0, 1 and 2)
     }
 
     PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);

@@ -101,7 +101,7 @@ float moveDistance = 0.f;                                // waypoint displacemen
 
 // Heading:
 float heading_increment = 0.f;                          // heading angle increment [deg]
-const float heading_magnitude = 10.f;                        // heading angle magnitude [deg]
+const float heading_magnitude = 15.f;                        // heading angle magnitude [deg]
 float heading_increment_OOB = 1.f * heading_magnitude; // CW heading angle increment [deg]
 
 // COUNTER:

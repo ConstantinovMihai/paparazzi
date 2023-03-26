@@ -297,14 +297,16 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     //*direction ; /// default 0; middle; negative = left; positive = right (to be scaled later)
     //  int32_t cnt_green = 288;
     int32_t img_segments = 3;
-    int32_t left_segment = 0;
     int32_t mid_segment = 1;
-    int32_t right_segment = 2;
-    int32_t scaling = 1;
+    int32_t cnt_green = 0;
+    
+    // define settings
+    //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
+    float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
     int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 5 segments of the photo
-    int64_t floor_threshold_per_segment = 10000000000;
     int64_t floor_threshold_per_segment_arr[img_segments];
 
+    
     // iterate over all possible headings from the image
     for (int i = 0; i < img_segments; i++)
     {
@@ -312,7 +314,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         uint16_t start_x = (uint16_t) roundf(i * img->w / (float) img_segments);
         uint16_t end_x = (uint16_t) roundf((i + 1) * img->w / (float) img_segments);
         // reinitialize the green count per section
-        int32_t cnt_green = 0;
+        cnt_green = 0;
         // Go through all the pixels
         for (uint32_t y = 0; y < img->h; y++)
         {
@@ -347,14 +349,6 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     //    *yp = 0;  // make pixel dark in the image
                     //}
                 }
-                /// Compute the green threshold per section
-                /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
-                // define settings
-                //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
-                float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
-                floor_threshold_per_segment = oag_floor_count_frac * img->w * (end_x - start_x);
-                floor_threshold_per_segment_arr[i] = floor_threshold_per_segment;
-
 
                 // TO DO ADDITIONAL SECTION
                 // DETERMINE IF CURRENT MIDDLE SECTION = 2 HAS THE DESIRED THRESHOLD
@@ -377,6 +371,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 }
             }
         }
+        /// Compute the green threshold per section
+        /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
+        floor_threshold_per_segment_arr[i] = oag_floor_count_frac * img->w * (end_x - start_x);
         //Compute the green color count per each of the segments of the photo
         color_count_per_img_segment_arr[i] = cnt_green;
 
@@ -396,20 +393,18 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
 
-
-
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 404;
 
     // check if the maximum color count is above the threshold and find the direction with the maximum color count
     for (int j = 0; j < img_segments; j++) {
-        if (color_count_per_img_segment_arr[j] >= maxValue && color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]) {
+        if (color_count_per_img_segment_arr[j] >= maxValue && color_count_per_img_segment_arr[j] >= floor_threshold_per_segment_arr[j]*120/100) {
             maxValue = color_count_per_img_segment_arr[j];
             maxIndex = j;
         }
     }
-    PRINT("S-1 %d, S0 %d, S1 %d \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
-    PRINT("TH-1 %d, TH0 %d, TH1 %d \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+    // PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+    // PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
     // set output variables
     if (maxIndex == 0) {
         *direction = -1;
@@ -421,9 +416,6 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         *direction = 404; // error turn back
     }
     *floor_color_count_img_segment = maxValue;
-
-    // print output variables
-    //PRINT("direction: %d  floor_color_count_img_segment: %d\n", *direction, *floor_color_count_img_segment);
 
 
 
@@ -483,7 +475,6 @@ void color_object_detector_periodic(void)
                                    0, 0, local_filters[0].color_count, local_filters[0].direction, local_filters[0].floor_color_count_img_segment, 0);
         local_filters[0].updated = false;
   }
-
 
   /// Comment IN if you want bottom camera info
   if(local_filters[1].updated){

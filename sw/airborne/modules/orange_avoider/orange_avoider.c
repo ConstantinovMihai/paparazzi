@@ -101,7 +101,7 @@ float moveDistance = 0.f;                                // waypoint displacemen
 
 // Heading:
 float heading_increment = 0.f;                          // heading angle increment [deg]
-const float heading_magnitude = 10.f;                        // heading angle magnitude [deg]
+const float heading_magnitude = 15.f;                        // heading angle magnitude [deg]
 float heading_increment_OOB = 1.f * heading_magnitude; // CW heading angle increment [deg]
 
 // COUNTER:
@@ -304,7 +304,7 @@ void orange_avoider_periodic(void)
       guidance_h_set_body_vel(0, 0);
       
       // Turn CW
-      increase_nav_heading(5.f);
+      increase_nav_heading(90.f);
 
       if (safe_heading_green != 404) {
         navigation_state = SAFE;

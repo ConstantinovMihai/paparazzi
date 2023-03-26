@@ -304,7 +304,7 @@ void orange_avoider_periodic(void)
       guidance_h_set_body_vel(0, 0);
       
       // Turn CW
-      increase_nav_heading(5.f);
+      increase_nav_heading(90.f);
 
       if (safe_heading_green != 404) {
         navigation_state = SAFE;

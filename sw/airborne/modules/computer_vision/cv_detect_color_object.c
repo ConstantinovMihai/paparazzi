@@ -294,7 +294,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     uint8_t *buffer = img->buf;
 
     /// (NEW) define the new varialbes
-    *direction = 0; /// default 0; middle; negative = left; positive = right (to be scaled later)
+    //*direction ; /// default 0; middle; negative = left; positive = right (to be scaled later)
     //  int32_t cnt_green = 288;
     int32_t img_segments = 3;
     int32_t left_segment = 0;
@@ -309,8 +309,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     for (int i = 0; i < img_segments; i++)
     {
         // Determine the start and end of each of the possible heading sections
-        uint16_t start_x = (uint16_t) roundf(i * img->w / (float) 5);
-        uint16_t end_x = (uint16_t) roundf((i + 1) * img->w / (float) 5);
+        uint16_t start_x = (uint16_t) roundf(i * img->w / (float) img_segments);
+        uint16_t end_x = (uint16_t) roundf((i + 1) * img->w / (float) img_segments);
         // reinitialize the green count per section
         int32_t cnt_green = 0;
         // Go through all the pixels
@@ -392,31 +392,38 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
 
     // after you iterated over all image segments
  /// Check if the default heading(2 - middle) is still safe or we need to change it
-    if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1] * 105 / 100) {
-        uint8_t maxValue = color_count_per_img_segment_arr[mid_segment];
-        if (color_count_per_img_segment_arr[left_segment] > maxValue && color_count_per_img_segment_arr[left_segment] > floor_threshold_per_segment_arr[0] * 105 / 100) {
-            //maxValue = color_count_per_img_segment_arr[0];
-            *direction = 0 -  scaling; // change the index to center it around 0 with negative values = left; positive = right
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[left_segment];
+    if (color_count_per_img_segment_arr[mid_segment] > floor_threshold_per_segment_arr[1] * 105 / 100){
+        *direction = 0;
+        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+    }else if (color_count_per_img_segment_arr[mid_segment] <= floor_threshold_per_segment_arr[1] * 105 / 100) {
+        //        *direction = 1;
+        //        *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
+        /// check for max diraction
+        int32_t max_dir;
+        if (color_count_per_img_segment_arr[left_segment] >= color_count_per_img_segment_arr[right_segment]){
+            max_dir = left_segment; // 0
+        } else{
+            max_dir = right_segment; // 2
         }
-        else if (color_count_per_img_segment_arr[right_segment] > maxValue  && color_count_per_img_segment_arr[right_segment] > floor_threshold_per_segment_arr[2] * 105 / 100)  {
-            //maxValue = color_count_per_img_segment_arr[0];
-            *direction = 2 -  scaling; // change the index to center it around 0 with negative values = left; positive = right
-            *floor_color_count_img_segment = color_count_per_img_segment_arr[right_segment];
+        if (color_count_per_img_segment_arr[max_dir] > floor_threshold_per_segment_arr[max_dir] * 105 / 100){
+            *direction = max_dir - scaling; // change the index to center it around 0 with negative values = left; positive = right
+            *floor_color_count_img_segment = color_count_per_img_segment_arr[max_dir];
+        } else {
+            *direction = 404; // error turn back
+            *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
         }
+
+    } else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
+        *direction = 404; // error turn back
+        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
+    } else {
+        *direction = 0; // return the values just for the straight heading
+        *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
     }
+
         // PRINT("TEST IN cv_detect_color_object");
         // PRINT("direction: %d  floor_color_count_img_segment: %d\n", direction, floor_color_count_img_segment)
-        
-    else if (color_count_per_img_segment_arr[mid_segment] < floor_threshold_per_segment_arr[1]) {
-      *direction = 404; // error turn back
-      *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    } 
-    
-    else {
-      *direction = 0; // return the values just for the straight heading
-      *floor_color_count_img_segment = color_count_per_img_segment_arr[mid_segment];
-    }
+
 
     return cnt;
 

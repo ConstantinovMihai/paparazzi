@@ -223,7 +223,7 @@ void orange_avoider_periodic(void)
   // PRINT("[STATE] State: %d \n", navigation_state); // Print visual detection pixel colour values and navigation state
 
   // Distance waypoint moves ahead of drone -> compares both orange avoider and optical flow confidences followed by the maxDistance comparison and takes the min value out of all of them
-  moveDistance = maxDistance; // fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
+  moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
 
   ////// NAVIGATION STATE MACHINE //////
   switch (navigation_state) {

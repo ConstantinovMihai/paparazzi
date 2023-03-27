@@ -33,6 +33,9 @@
 #define CACHE_LINE_LENGTH 64
 #endif
 
+#define PRINT(string,...) fprintf(stderr, "[orange_avoider->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+
+
 /**
  * Create a new image
  * @param[out] *img The output image
@@ -169,20 +172,23 @@ void image_to_grayscale_cropped(struct image_t *input, struct image_t *output)
     uint8_t *source = input->buf;
     uint8_t *dest = output->buf;
     source++;
-    source += 300;
+    source += 240*300;
 
     // Copy the creation timestamp (stays the same)
     output->ts = input->ts;
     output->eulers = input->eulers;
     output->pprz_ts = input->pprz_ts;
 
+
     // Copy the pixels
     int height = output->h;
     int width = output->w;
+
+    PRINT("width %d; height: %d \n", width, height);
     if (output->type == IMAGE_YUV422) {
-        for (int y = 0; y < height; y++) {
-            source += 600;
-            for (int x = 150; x < 370; x++) {
+        for (int y = 150; y < 370; y++) {
+            source += 80 * 2;
+            for (int x = 40; x < 200; x++) {
                 *dest++ = 127;  // U / V
                 *dest++ = *source;    // Y
                 source += 2;

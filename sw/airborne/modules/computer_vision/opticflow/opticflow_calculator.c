@@ -495,9 +495,10 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
 {
   if (opticflow->just_switched_method) {
     // Create the image buffers
-    u_int16_t w_cropped = 220;
-    image_create(&opticflow->img_gray, w_cropped, img->h, IMAGE_GRAYSCALE);
-    image_create(&opticflow->prev_img_gray, w_cropped, img->h, IMAGE_GRAYSCALE);
+    u_int16_t w_cropped = 160;
+    u_int16_t h_cropped = 220;
+    image_create(&opticflow->img_gray, w_cropped, h_cropped, IMAGE_GRAYSCALE);
+    image_create(&opticflow->prev_img_gray, w_cropped, h_cropped, IMAGE_GRAYSCALE);
 
     // Set the previous values
     opticflow->got_first_img = false;

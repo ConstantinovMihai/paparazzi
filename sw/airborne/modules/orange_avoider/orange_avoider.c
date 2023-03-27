@@ -75,6 +75,7 @@ enum navigation_state_t {
 enum search_safe_heading_state_t {
   ORANGE,
   GREEN,
+  OPTICAL_FLOW,
 };
 
 enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING;
@@ -90,12 +91,16 @@ float oa_floor_count_frac = 0.065f;                       // floor detection thr
 
 int32_t safe_heading_green = 0;                          // safe heading for green detection
 
+float div_size = 0;                                      // divergence size from optical flow for obstacle detection
+float divergence_threshold = 0.0085;                      // threshold for the divergence value for optical flow object detection
+
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
+int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free for orange detection
+const int16_t max_trajectory_confidence_opticalflow = 5; // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
 
 // Distances:
 float maxDistance = 0.8;                                 // max waypoint displacement [m]
-float moveDistance = 0.f;                                // waypoint displacement [m] 
 // float heading_increment_CCW = -8.f;                     // CCW heading angle increment [deg]
 // float heading_increment_TurnAround = 8.f;               // Turn 180 [deg] CW in 45 [deg] increments to go back
 
@@ -161,24 +166,22 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
 //   div_diff = diff_divergence;
 // }
 
-// //// Receive ABI message from opticflow_module.c, where the divergence value is of interest
-// #ifndef OPTICAL_FLOW_ID
-// #define OPTICAL_FLOW_ID ABI_BROADCAST
-// #endif
-// static abi_event optical_flow_ev;
-// static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
-//                             uint32_t __attribute__((unused)) stamp, 
-//                             int32_t __attribute__((unused)) flow_x,
-//                             int32_t __attribute__((unused)) flow_y,
-//                             int32_t __attribute__((unused)) flow_der_x,
-//                             int32_t __attribute__((unused)) flow_der_y,
-//                             float __attribute__((unused)) quality, 
-//                             float size_divergence,
-//                             double diff_divergence) 
-// {
-//   div_size = size_divergence;
-//   div_diff = diff_divergence;
-// }
+//// Receive ABI message from opticflow_module.c, where the divergence value is of interest
+#ifndef OPTICAL_FLOW_ID
+#define OPTICAL_FLOW_ID ABI_BROADCAST
+#endif
+static abi_event optical_flow_ev;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+                            uint32_t __attribute__((unused)) stamp, 
+                            int32_t __attribute__((unused)) flow_x,
+                            int32_t __attribute__((unused)) flow_y,
+                            int32_t __attribute__((unused)) flow_der_x,
+                            int32_t __attribute__((unused)) flow_der_y,
+                            float __attribute__((unused)) quality, 
+                            float size_divergence) 
+{
+  div_size = size_divergence;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     ////// RUN AUTOPILOT INIT FUNCTION //////
@@ -195,7 +198,7 @@ void orange_avoider_init(void)
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
   //// Bind the optical flow callbacks to receive the divergence values
-  // AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
+  AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -222,28 +225,40 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
 
+    if (div_size < divergence_threshold) {
+    obstacle_free_confidence_opticalflow++;
+  } else {
+    obstacle_free_confidence_opticalflow -= 1; // Be more cautious with positive obstacle detections
+  }
+
   // Bound obstacle_free_confidence_orange
   Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange);
 
+  // Bound obstacle_free_confidence_opticalflow
+  Bound(obstacle_free_confidence_opticalflow, 0, max_trajectory_confidence_opticalflow);
+
   ////// PRINT DETECTION VALUES //////
-  PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
+  // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
+  // PRINT("Optical Flow Detection: %d Orange Detection: %d Out of Bounds Detection: %d Obstacle Free Optic: %d Obstacle Free Orange: %d \n", opticalflow_detection, orange_detection, out_of_bounds_detection, obstacle_free_confidence_opticalflow, obstacle_free_confidence_orange); // Print optical flow and orange detection
+
   // PRINT("[GREEN] Counter No Green: %d; Green Count: %d; Green Threshold: %d \n", C_ROBUST_NO_GREEN, floor_count, floor_count_threshold); // Print visual detection pixel colour values.
 
   // Print safe heading green
-  PRINT("[GREEN] SafeSafe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
+  // PRINT("[GREEN] SafeSafe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
 
   // Print obstacle free confidence orange
-  //PRINT("[ORANGE] Obstacle Free Confidence: %d \n", obstacle_free_confidence_orange); // Print visual detection pixel colour values and navigation state
+  PRINT("[OPTICAL_FLOW] Obstacle Free Confidence: %d; div_size: %lf \n", obstacle_free_confidence_opticalflow, div_size); // Print visual detection pixel colour values and navigation state
 
   // Print current state and possible safe heading caller
   if (previous_state != navigation_state) {
-    //PRINT("[STATE] State: %d \n", navigation_state); // Print visual detection pixel colour values and navigation state
+    PRINT("[STATE] State: %d \n", navigation_state); // Print visual detection pixel colour values and navigation state
     previous_state = navigation_state;
   }
   // PRINT("[STATE] State: %d \n", navigation_state); // Print visual detection pixel colour values and navigation state
 
   // Distance waypoint moves ahead of drone -> compares both orange avoider and optical flow confidences followed by the maxDistance comparison and takes the min value out of all of them
-  moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
+  float moveDistance_temp = fminf(0.2f * obstacle_free_confidence_orange, 0.2f * obstacle_free_confidence_opticalflow);
+  float moveDistance = fminf(maxDistance, moveDistance_temp);
 
   ////// NAVIGATION STATE MACHINE //////
   switch (navigation_state) {
@@ -253,17 +268,18 @@ void orange_avoider_periodic(void)
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) 
       {
         navigation_state = OUT_OF_BOUNDS;
+      } else if (obstacle_free_confidence_opticalflow == 0) {
+        navigation_state = SEARCH_SAFE_HEADING;
+        search_safe_heading_state = OPTICAL_FLOW;
       } else if (safe_heading_green == 404) {
         navigation_state = TURN_AROUND;
       } else if (obstacle_free_confidence_orange == 0) {
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = ORANGE;
-      } else if (abs(safe_heading_green) == 1) 
-      {
+      } else if (abs(safe_heading_green) == 1) {
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = GREEN;
-      } else 
-      {
+      } else {
         moveWaypointForward(WP_GOAL, moveDistance);
       }
 
@@ -315,6 +331,15 @@ void orange_avoider_periodic(void)
             navigation_state = SAFE;
           }
           break;
+        case OPTICAL_FLOW:
+          // Stop
+          guidance_h_set_body_vel(0, 0);
+          /////////////// DIV_SIZE DETECTOR ///////////////
+          increase_nav_heading(90.f);
+          if (obstacle_free_confidence_opticalflow >= 3){ 
+            navigation_state = SAFE;
+          }
+          break;
         default:
           break;
       }
@@ -346,6 +371,7 @@ void orange_avoider_periodic(void)
         increase_nav_heading(heading_increment_OOB);
         // Set confidence to 0
         obstacle_free_confidence_orange = 0;
+        obstacle_free_confidence_opticalflow = 0;
         // Set robustness counter to 0
         C_ROBUSTNESS = 0;
         // Assume there is an obstacle to be safe (just in case)

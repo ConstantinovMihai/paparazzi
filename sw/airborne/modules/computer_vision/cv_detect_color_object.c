@@ -437,12 +437,12 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// assume max is mid segment
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
-    float detectionTolerance = 2.0f;
+    float detectionTolerance = 1.8f;
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t minValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 1;
     bool atLeastOneAboveTh = false;
-    int32_t margin_between_min_max = 50;
+    int32_t margin_between_min_max = 70;
     bool above_th_arr[img_segments];
     
     // Check if the maximum color count is above the threshold and find the direction with the maximum color count

@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 int opencv_example(char *img, int width, int height);
-
+int getDenseFlow(char *img, )
 #ifdef __cplusplus
 }
 #endif

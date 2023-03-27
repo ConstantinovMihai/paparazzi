@@ -26,8 +26,6 @@
 
 #include "opencv_example.h"
 
-
-
 using namespace std;
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -40,6 +38,8 @@ int opencv_example(char *img, int width, int height)
   // Create a new image, using the original bebop image.
   Mat M(height, width, CV_8UC2, img);
   Mat image;
+  // cropping the image
+  Mat cropped_img = img(Range(120,400), Range(20,150));
 
 #if OPENCVDEMO_GRAYSCALE
   //  Grayscale image example

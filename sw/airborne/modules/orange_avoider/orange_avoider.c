@@ -96,14 +96,14 @@ float div_size = 0;                                      // divergence size from
 float divergence_threshold = 0.0085;                      // threshold for the divergence value for optical flow object detection
 
 double div_diff = 0.f;                                    // divergence difference between right and left half of image to determine whether there is an obstacle in left or right half of image -> see size_divergence.c
-double divergence_difference_threshold = 450;             // threshold for the divergence difference value for optical flow object detection
+double divergence_difference_threshold = 600;             // threshold for the divergence difference value for optical flow object detection
 
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow
 int16_t obstacle_free_confidence_div_diff = 0;           // a measure of how certain we are that the divergence difference is safe for optical flow
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free for orange detection
 const int16_t max_trajectory_confidence_opticalflow = 5; // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
-const int32_t max_trajectory_confidence_div_diff = 10;    // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
+const int32_t max_trajectory_confidence_div_diff = 5;    // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
 
 // Distances:
 float maxDistance = 0.8;                                 // max waypoint displacement [m]
@@ -250,7 +250,7 @@ void orange_avoider_periodic(void)
   // PRINT("[OPTICAL_FLOW] Obstacle Free Confidence: %d; div_size: %lf \n", obstacle_free_confidence_opticalflow, div_size); // Print visual detection pixel colour values and navigation state
 
   // Print obstacle free confidence div_diff
-  PRINT("[DIV_DIFF] CFDNCE: %d \n", obstacle_free_confidence_div_diff);
+  PRINT("[DIV_DIFF] CFDNCE: %d; div_diff: %f \n", obstacle_free_confidence_div_diff, div_diff);
 
   // Print current state and possible safe heading caller
   if (previous_state != navigation_state) {
@@ -358,10 +358,10 @@ void orange_avoider_periodic(void)
 
           C_DIV_DIFF_MAX_ANGLE_TURN++;
 
-          if (C_DIV_DIFF_MAX_ANGLE_TURN >= 2 || obstacle_free_confidence_div_diff >= 2){ 
-            navigation_state = SAFE;
+          if (C_DIV_DIFF_MAX_ANGLE_TURN >= 2 || obstacle_free_confidence_div_diff >= 2) { 
             C_DIV_DIFF_MAX_ANGLE_TURN = 0;
-            obstacle_free_confidence_div_diff = 5;
+            obstacle_free_confidence_div_diff = max_trajectory_confidence_div_diff;
+            navigation_state = SAFE;
           }
           break;
         default:

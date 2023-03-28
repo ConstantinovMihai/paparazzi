@@ -103,7 +103,7 @@ int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how cer
 int16_t obstacle_free_confidence_div_diff = 0;           // a measure of how certain we are that the divergence difference is safe for optical flow
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free for orange detection
 const int16_t max_trajectory_confidence_opticalflow = 5; // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
-const int32_t max_trajectory_confidence_div_diff = 6;    // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
+const int32_t max_trajectory_confidence_div_diff = 10;    // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
 
 // Distances:
 float maxDistance = 0.8;                                 // max waypoint displacement [m]
@@ -117,6 +117,7 @@ float heading_increment_OOB = 1.f * heading_magnitude; // CW heading angle incre
 
 // COUNTER:
 int16_t C_ROBUSTNESS = 0;
+int16_t C_DIV_DIFF_MAX_ANGLE_TURN;
 
 // Debugging:
 enum navigation_state_t previous_state = SAFE;           // previous state
@@ -165,7 +166,7 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             int32_t __attribute__((unused)) flow_der_y,
                             float __attribute__((unused)) quality, 
                             float size_divergence,
-                            double diff_divergence,
+                            double diff_divergence)
 {
   div_size = size_divergence;
   div_diff = diff_divergence;
@@ -223,7 +224,7 @@ void orange_avoider_periodic(void)
   if (fabs(div_diff) < divergence_difference_threshold) {
     obstacle_free_confidence_div_diff++;
   } else {
-    obstacle_free_confidence_div_diff -= 2; // Be more cautious with positive obstacle detections
+    obstacle_free_confidence_div_diff -= 1; // Be more cautious with positive obstacle detections
   }
 
   // Bound obstacle_free_confidence_orange
@@ -246,7 +247,10 @@ void orange_avoider_periodic(void)
   // PRINT("[GREEN] SafeSafe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
 
   // Print obstacle free confidence orange
-  PRINT("[OPTICAL_FLOW] Obstacle Free Confidence: %d; div_size: %lf \n", obstacle_free_confidence_opticalflow, div_size); // Print visual detection pixel colour values and navigation state
+  // PRINT("[OPTICAL_FLOW] Obstacle Free Confidence: %d; div_size: %lf \n", obstacle_free_confidence_opticalflow, div_size); // Print visual detection pixel colour values and navigation state
+
+  // Print obstacle free confidence div_diff
+  PRINT("[DIV_DIFF] CFDNCE: %d \n", obstacle_free_confidence_div_diff);
 
   // Print current state and possible safe heading caller
   if (previous_state != navigation_state) {
@@ -346,9 +350,18 @@ void orange_avoider_periodic(void)
           // Stop
           guidance_h_set_body_vel(0, 0);
           /////////////// DIV_DIFF DETECTOR ///////////////
-          increase_nav_heading(90.f);
-          if (obstacle_free_confidence_div_diff >= 3){ 
+          if (div_diff >= 0.f) {
+            increase_nav_heading(45.f);
+          } else {
+            increase_nav_heading(-45.f);
+          }
+
+          C_DIV_DIFF_MAX_ANGLE_TURN++;
+
+          if (C_DIV_DIFF_MAX_ANGLE_TURN >= 2 || obstacle_free_confidence_div_diff >= 2){ 
             navigation_state = SAFE;
+            C_DIV_DIFF_MAX_ANGLE_TURN = 0;
+            obstacle_free_confidence_div_diff = 5;
           }
           break;
         default:

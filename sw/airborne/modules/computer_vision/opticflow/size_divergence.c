@@ -185,7 +185,7 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
         return 0.f;
     }
 
-    // PRINT(" dx: %lf; dy: %lf; divs_sum_difference: %lf\n", dx, dy, divs_sum/used_samples);
+    PRINT("  divs_sum: %lf\n", divs_sum/used_samples);
 
     // return the calculated mean divergence:
     return divs_sum / used_samples;
@@ -220,8 +220,8 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
     uint32_t used_samples_right = 0;
     double dx, dy;
     int32_t i;
-    int32_t image_width_half = (front_camera.output_size.h/2) * 100; // Width of captured image (maybe needs a header file)
-    int32_t image_height_half = (front_camera.output_size.w/2) * 100;
+    int32_t image_width_half = (front_camera.output_size.w/2) * 100; // Width of captured image (maybe needs a header file)
+    int32_t image_height_half = (front_camera.output_size.h/2) * 100;
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
@@ -238,11 +238,11 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
         // Compute the norm of the flow vector and normalise it (normalisation 1)
         flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
 
-        PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
-        PRINT(" pos x: %lf; flow x: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].flow_x);
-        PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
-        PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
-
+//        PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
+//        PRINT(" pos x: %lf; flow x: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].flow_x);
+//        PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
+//        PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
+       // PRINT(" pos x: %lf; pox y: %lf\n",  (double)vectors[i].pos.x,  (double)vectors[i].pos.y);
         // Decide whether the optic flow vector is on the left or on the right
         if ((double) vectors[i].pos.x < image_width_half) {
             divs_sum_left += flow_norm; // Left part of image considered
@@ -252,8 +252,8 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
             used_samples_right++;
         }
         used_samples++;
-        PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
-        PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left, divs_sum_right);
+//        PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
+//        PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left, divs_sum_right);
     }
 
     if (used_samples_left < 1 || used_samples_right < 1){
@@ -266,7 +266,7 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
 
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
-    // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
+    PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
 
     // If this is the first time the function is called, set the old value to the new value
     if (F_FIRST_TIME_MOVING_FILTER) {

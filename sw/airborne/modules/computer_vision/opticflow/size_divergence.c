@@ -238,10 +238,10 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
         // Compute the norm of the flow vector and normalise it (normalisation 1)
         flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
 
-        // PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
-        // PRINT(" pos x: %lf; flow x: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].flow_x);
-        // PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
-        // PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
+        PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
+        PRINT(" pos x: %lf; flow x: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].flow_x);
+        PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
+        PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
 
         // Decide whether the optic flow vector is on the left or on the right
         if ((double) vectors[i].pos.x < image_width_half) {
@@ -252,6 +252,7 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
             used_samples_right++;
         }
         used_samples++;
+        PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
         PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left, divs_sum_right);
     }
 

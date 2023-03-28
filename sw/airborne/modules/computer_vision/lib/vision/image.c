@@ -33,6 +33,9 @@
 #define CACHE_LINE_LENGTH 64
 #endif
 
+#define PRINT(string,...) fprintf(stderr, "[orange_avoider->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+
+
 /**
  * Create a new image
  * @param[out] *img The output image
@@ -156,6 +159,46 @@ void image_to_grayscale(struct image_t *input, struct image_t *output)
         source++;
     }
   }
+}
+
+/**
+ * Convert an image to grayscale.
+ * Depending on the output type the U/V bytes are removed
+ * @param[in] *input The input image (Needs to be YUV422)
+ * @param[out] *output The output image
+ */
+void image_to_grayscale_cropped(struct image_t *input, struct image_t *output)
+{
+    uint8_t *source = input->buf;
+    uint8_t *dest = output->buf;
+    source++;
+    source += 240*300 - 2*40;
+
+    // Copy the creation timestamp (stays the same)
+    output->ts = input->ts;
+    output->eulers = input->eulers;
+    output->pprz_ts = input->pprz_ts;
+
+
+    // Copy the pixels
+    int height = output->h;
+    int width = output->w;
+
+    if (output->type == IMAGE_YUV422) {
+        for (int y = 150; y < 370; y++) {
+            source += 80 * 2;
+            for (int x = 40; x < 200; x++) {
+                *dest++ = 127;  // U / V
+                *dest++ = *source;    // Y
+                source += 2;
+            }
+        }
+    } else {
+        for (int y = 0; y < height * width; y++) {
+            *dest++ = *source++;    // Y
+            source++;
+        }
+    }
 }
 
 /**
@@ -749,11 +792,11 @@ void image_show_flow_color(struct image_t *img, struct flow_t *vectors, uint16_t
   for (uint16_t i = 0; i < points_cnt; i++) {
     // Draw a line from the original position with the flow vector
     struct point_t from = {
-      .x = vectors[i].pos.x / subpixel_factor,
+      .x = vectors[i].pos.x / subpixel_factor ,
       .y = vectors[i].pos.y / subpixel_factor
     };
     struct point_t to = {
-      .x = (uint32_t)roundf(((float)vectors[i].pos.x + vectors[i].flow_x) / subpixel_factor),
+      .x = (uint32_t)roundf(((float)vectors[i].pos.x + vectors[i].flow_x) / subpixel_factor) ,
       .y = (uint32_t)roundf(((float)vectors[i].pos.y + vectors[i].flow_y) / subpixel_factor)
     };
 

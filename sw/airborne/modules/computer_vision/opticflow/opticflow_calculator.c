@@ -50,10 +50,10 @@
 #include BOARD_CONFIG
 
 // whether to show the flow and corners:
-#define OPTICFLOW_SHOW_CORNERS 0
+#define OPTICFLOW_SHOW_CORNERS 1
 
-#define EXHAUSTIVE_FAST 0
-#define ACT_FAST 1
+#define EXHAUSTIVE_FAST 1
+#define ACT_FAST 0
 // TODO: these are now adapted, but perhaps later could be a setting:
 uint16_t n_time_steps[2] = {10, 10};
 uint16_t n_agents[2] = {25, 25};
@@ -250,11 +250,11 @@ PRINT_CONFIG_VAR(OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y)
 PRINT_CONFIG_VAR(OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y_CAMERA2)
 
 #ifndef OPTICFLOW_MEDIAN_FILTER
-#define OPTICFLOW_MEDIAN_FILTER FALSE
+#define OPTICFLOW_MEDIAN_FILTER TRUE
 #endif
 
 #ifndef OPTICFLOW_MEDIAN_FILTER_CAMERA2
-#define OPTICFLOW_MEDIAN_FILTER_CAMERA2 FALSE
+#define OPTICFLOW_MEDIAN_FILTER_CAMERA2 TRUE
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_MEDIAN_FILTER)
 PRINT_CONFIG_VAR(OPTICFLOW_MEDIAN_FILTER_CAMERA2)
@@ -353,7 +353,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_ACTFAST_MIN_GRADIENT_CAMERA2)
 // Tracking back flow to make the accepted flow vectors more robust:
 // Default is false, as it does take extra processing time
 #ifndef OPTICFLOW_TRACK_BACK
-#define OPTICFLOW_TRACK_BACK FALSE
+#define OPTICFLOW_TRACK_BACK TRUE
 #endif
 
 #ifndef OPTICFLOW_TRACK_BACK_CAMERA2
@@ -365,7 +365,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_TRACK_BACK_CAMERA2)
 // Whether to draw the flow on the image:
 // False by default, since it changes the image and costs time.
 #ifndef OPTICFLOW_SHOW_FLOW
-#define OPTICFLOW_SHOW_FLOW FALSE
+#define OPTICFLOW_SHOW_FLOW TRUE
 #endif
 
 #ifndef OPTICFLOW_SHOW_FLOW_CAMERA2
@@ -491,12 +491,13 @@ void opticflow_calc_init(struct opticflow_t opticflow[])
  * @return Was optical flow successful
  */
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
-                             struct opticflow_result_t *result)
-{
+                             struct opticflow_result_t *result) {
   if (opticflow->just_switched_method) {
     // Create the image buffers
-    image_create(&opticflow->img_gray, img->w, img->h, IMAGE_GRAYSCALE);
-    image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_GRAYSCALE);
+    u_int16_t w_cropped = 160;
+    u_int16_t h_cropped = 220;
+    image_create(&opticflow->img_gray, w_cropped, h_cropped, IMAGE_GRAYSCALE);
+    image_create(&opticflow->prev_img_gray, w_cropped, h_cropped, IMAGE_GRAYSCALE);
 
     // Set the previous values
     opticflow->got_first_img = false;
@@ -506,7 +507,23 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   }
 
   // Convert image to grayscale
-  image_to_grayscale(img, &opticflow->img_gray);
+  image_to_grayscale_cropped(img, &opticflow->img_gray);
+
+//if (opticflow->just_switched_method) {
+//// Create the image buffers
+//image_create(&opticflow->img_gray, img->w, img->h, IMAGE_GRAYSCALE);
+//image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_GRAYSCALE);
+//
+//// Set the previous values
+//opticflow->got_first_img = false;
+//
+//// Init median filters with zeros
+//InitMedianFilterVect3Float(vel_filt, MEDIAN_DEFAULT_SIZE);
+//}
+
+
+// Convert image to grayscale
+image_to_grayscale(img, &opticflow->img_gray);
 
   if (!opticflow->got_first_img) {
     image_copy(&opticflow->img_gray, &opticflow->prev_img_gray);
@@ -659,13 +676,13 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   }
 
   static int n_samples = 100;
-  struct flow_t* filtered_vectors = calloc(result->tracked_cnt, sizeof(struct flow_t));
+  // struct flow_t* filtered_vectors = calloc(result->tracked_cnt, sizeof(struct flow_t));
   // Estimate size divergence:
   if (SIZE_DIV) {
     // Filter vectors to get only optical flow vectors in specified region of interest
-    filter_vectors(vectors, result->tracked_cnt, filtered_vectors);
-    result->div_size = get_size_divergence(filtered_vectors, result->tracked_cnt, n_samples);// * result->fps;
-    result->div_diff = get_difference_divergence(filtered_vectors, result->tracked_cnt, n_samples);
+    // filter_vectors(vectors, result->tracked_cnt, filtered_vectors);
+    result->div_size = get_size_divergence(vectors, result->tracked_cnt, n_samples);// * result->fps;
+    result->div_diff = get_difference_divergence(vectors, result->tracked_cnt, opticflow->subpixel_factor);
   } else {
     result->div_size = 0.0f;
     result->div_diff = 0.0f;
@@ -710,6 +727,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->flow_x = (vectors[result->tracked_cnt / 2 - 1].flow_x + vectors[result->tracked_cnt / 2].flow_x) / 2.f;
     result->flow_y = (vectors[result->tracked_cnt / 2 - 1].flow_y + vectors[result->tracked_cnt / 2].flow_y) / 2.f;
   }
+  //PRINT("Flow x: %lf; Flow y: %lf\n", result->flow_x, result->flow_y);
 
   // TODO scale flow to rad/s here
 
@@ -773,6 +791,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
           result->flow_der_x = (vectors[result->tracked_cnt / 2 - 1].flow_x + vectors[result->tracked_cnt / 2].flow_x) / 2.f;
           result->flow_der_y = (vectors[result->tracked_cnt / 2 - 1].flow_y + vectors[result->tracked_cnt / 2].flow_y) / 2.f;
         }
+        //PRINT("Flow der x: %lf; Flow der y: %lf\n", result->flow_der_x, result->flow_der_y);
       }
     }
   }

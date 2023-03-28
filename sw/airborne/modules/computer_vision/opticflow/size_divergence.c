@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #define PRINT(string,...) fprintf(stderr, "[size_divergence->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
-float moving_average_filter(float current_value, float old_value);
+float moving_average_filter_div_diff(float current_value, float old_value);
 bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x2, int32_t y1, int32_t y2);
 
 /**
@@ -97,11 +97,6 @@ int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *fi
  * @return divergence
  */
 
-// Keep track of the old divergence difference for the moving average filter
-float divs_sum_difference_old = 0.f;
-float divs_sum_old = 0.f;
-bool F_FIRST_TIME_MOVING_FILTER = true;
-
 float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 {
     float distance_1, distance_2;
@@ -127,6 +122,10 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
                 dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
                 distance_1 = sqrtf(dx * dx + dy * dy);
 
+                // PRINT(" pos x: %lf; pos x: %lf\n", (float)vectors[i].pos.x, (float)vectors[j].pos.x);
+                // PRINT(" pos y: %lf; pos y: %lf\n", (float)vectors[i].pos.y, (float)vectors[j].pos.y);
+                // PRINT(" dx: %lf; dy: %lf; distance 1: %lf\n", dx, dy, distance_1);
+
                 if (distance_1 < 1E-5) {
                     continue;
                 }
@@ -135,6 +134,10 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
                 dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
                 dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
                 distance_2 = sqrtf(dx * dx + dy * dy);
+
+                // PRINT(" flow x: %lf; flow x: %lf\n", (float)vectors[i].flow_x, (float)vectors[j].flow_x);
+                // PRINT(" flow y: %lf; flow y: %lf\n", (float)vectors[i].flow_y, (float)vectors[j].flow_y);
+                // PRINT(" dx: %lf; dy: %lf; distance 2: %lf\n", dx, dy, distance_2);
 
                 divs_sum += (distance_2 - distance_1) / distance_1;
                 used_samples++;
@@ -156,6 +159,10 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
             dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
             distance_1 = sqrtf(dx * dx + dy * dy);
 
+            // PRINT(" pos x: %lf; pos x: %lf\n", (float)vectors[i].pos.x, (float)vectors[j].pos.x);
+            // PRINT(" pos y: %lf; pos y: %lf\n", (float)vectors[i].pos.y, (float)vectors[j].pos.y);
+            // PRINT(" dx: %lf; dy: %lf; distance 1: %lf\n", dx, dy, distance_1);
+
             if (distance_1 < 1E-5) {
                 continue;
             }
@@ -164,6 +171,10 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
             dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
             dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
             distance_2 = sqrtf(dx * dx + dy * dy);
+
+            // PRINT(" flow x: %lf; flow x: %lf\n", (float)vectors[i].flow_x, (float)vectors[j].flow_x);
+            // PRINT(" flow y: %lf; flow y: %lf\n", (float)vectors[i].flow_y, (float)vectors[j].flow_y);
+            // PRINT(" dx: %lf; dy: %lf; distance 2: %lf\n", dx, dy, distance_2);
 
             divs_sum += (distance_2 - distance_1) / distance_1;
             used_samples++;
@@ -174,24 +185,22 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
         return 0.f;
     }
 
-    // Calculate mean divergence over used_samples
-    divs_sum = divs_sum / used_samples;
+   // PRINT(" divs_sum: %lf\n", divs_sum/used_samples);
 
-    // If this is the first time the function is called, set the old value to the new value
-    if (F_FIRST_TIME_MOVING_FILTER) {
-        divs_sum_old = divs_sum;
-        F_FIRST_TIME_MOVING_FILTER = false;
-    }
-
-    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
-    divs_sum = moving_average_filter(divs_sum, divs_sum_old);
-    divs_sum_old = divs_sum;
-
-    // return the calculated filtered divergence:
-    return divs_sum;
+    // return the calculated mean divergence:
+    return divs_sum / used_samples;
 }
 
-double get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
+float moving_average_filter_div_diff(float current_value, float old_value)
+{
+    return ((0.4*current_value) + (1-0.4)*old_value);
+}
+
+// Keep track of the old divergence difference for the moving average filter
+float divs_sum_difference_old = 0.f;
+bool F_FIRST_TIME_MOVING_FILTER = true;
+
+double get_difference_divergence(struct flow_t *vectors, int count, int subpixel_factor)
 {
     // computes the difference between the normalised divergence on the left and right sides of the image
     // the two normalisations are:
@@ -211,62 +220,76 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
     uint32_t used_samples_right = 0;
     double dx, dy;
     int32_t i;
-    int32_t image_width_half = (front_camera.output_size.h/2) * 100; // Width of captured image (maybe needs a header file)
-    int32_t image_height_half = (front_camera.output_size.w/2) * 100;
+    uint32_t image_width_half = 80 * subpixel_factor; // Width of captured image (maybe needs a header file)
+    uint32_t image_height_half = 110 * subpixel_factor;
+
+    // int32_t image_width_half = (front_camera.output_size.w/2) * 100; // Width of captured image (maybe needs a header file)
+    // int32_t image_height_half = (front_camera.output_size.h/2) * 100;
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
     for (i = 0; i < count; i++) {
-        // Distance in previous image:
-        dx = (double)vectors[i].flow_x;
-        dy = (double)vectors[i].flow_y;
+        if (vectors[i].error < 10E5)
+        {
+            // Distance in previous image:
+            dx = (double) vectors[i].flow_x;
+            dy = (double) vectors[i].flow_y;
 
-        // this is the linear normalisation coefficient
-        coeff_norm = sqrtf(
-                ((double) vectors[i].pos.x - image_width_half) * ((double) vectors[i].pos.x - image_width_half) +
-                ((double) vectors[i].pos.y - image_height_half) * ((double) vectors[i].pos.y - image_height_half));
+            // this is the linear normalisation coefficient
+            coeff_norm = sqrtf(
+                    ((double) vectors[i].pos.x - image_width_half) * ((double) vectors[i].pos.x - image_width_half) +
+                    ((double) vectors[i].pos.y - image_height_half) * ((double) vectors[i].pos.y - image_height_half));
 
-        // Compute the norm of the flow vector and normalise it (normalisation 1)
-        flow_norm = sqrtf(dx * dx + dy * dy) / coeff_norm;
+            // Compute the norm of the flow vector and normalise it (normalisation 1)
+            flow_norm = sqrtf(dx * dx + dy * dy); // coeff_norm;
 
-        // Decide whether the optic flow vector is on the left or on the right
-        if ((double) vectors[i].pos.x < image_width_half) {
-            divs_sum_left += flow_norm; // Left part of image considered
-            used_samples_left++;
-        } else {
-            divs_sum_right += flow_norm; // Right part of image considered
-            used_samples_right++;
+            // PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
+            //PRINT(" pos x: %lf; pos y: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].pos.y);
+            //  PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
+            //  PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
+            // PRINT(" pos x: %lf; pox y: %lf\n",  (double)vectors[i].pos.x / subpixel_factor,  (double)vectors[i].pos.y / subpixel_factor);
+            // Decide whether the optic flow vector is on the left or on the right
+            if ((double) vectors[i].pos.y < image_width_half) {
+                divs_sum_left += flow_norm; // Left part of image considered
+                used_samples_left++;
+            } else {
+                divs_sum_right += flow_norm; // Right part of image considered
+                used_samples_right++;
+            }
+            used_samples++;
         }
-        used_samples++;
     }
 
-    if (used_samples_left < 1 || used_samples_right < 1){
-        return 0.f;
-    }
+    PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
+
+//    if (used_samples_left < 1 || used_samples_right < 1){
+//        return 0.f;
+//    }
 
     // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
-    divs_sum_left_mean = divs_sum_left / used_samples_left;
-    divs_sum_right_mean = divs_sum_right / used_samples_right;
-
-    divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
-
-    // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
-
-    // If this is the first time the function is called, set the old value to the new value
-    if (F_FIRST_TIME_MOVING_FILTER) {
-        divs_sum_difference_old = divs_sum_difference;
-        F_FIRST_TIME_MOVING_FILTER = false;
+    if (used_samples_left >= 1) {
+        divs_sum_left_mean = divs_sum_left / used_samples_left;
     }
 
-    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
-    divs_sum_difference = moving_average_filter(divs_sum_difference, divs_sum_difference_old);
-    divs_sum_difference_old = divs_sum_difference;
+    if (used_samples_right >= 1) {
+        divs_sum_right_mean = divs_sum_right / used_samples_right;
+    }
+    divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
+    PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left_mean, divs_sum_right_mean);
+
+   // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
+
+    // If this is the first time the function is called, set the old value to the new value
+//    if (F_FIRST_TIME_MOVING_FILTER) {
+//        divs_sum_difference_old = divs_sum_difference;
+//        F_FIRST_TIME_MOVING_FILTER = false;
+//    }
+//
+//    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
+//    divs_sum_difference = moving_average_filter_div_diff(divs_sum_difference, divs_sum_difference_old);
+//    divs_sum_difference_old = divs_sum_difference;
 
     return divs_sum_difference;
 }
 
-float moving_average_filter(float current_value, float old_value)
-{
-    return ((0.4*current_value) + (1-0.4)*old_value);
-}

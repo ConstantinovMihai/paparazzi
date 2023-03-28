@@ -229,45 +229,51 @@ double get_difference_divergence(struct flow_t *vectors, int count, int subpixel
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
     for (i = 0; i < count; i++) {
-        // Distance in previous image:
-        dx = (double)vectors[i].flow_x;
-        dy = (double)vectors[i].flow_y;
+        if (vectors[i].error < 10E5)
+        {
+            // Distance in previous image:
+            dx = (double) vectors[i].flow_x;
+            dy = (double) vectors[i].flow_y;
 
-        // this is the linear normalisation coefficient
-        coeff_norm = sqrtf(
-                ((double) vectors[i].pos.x - image_width_half) * ((double) vectors[i].pos.x - image_width_half) +
-                ((double) vectors[i].pos.y - image_height_half) * ((double) vectors[i].pos.y - image_height_half));
+            // this is the linear normalisation coefficient
+            coeff_norm = sqrtf(
+                    ((double) vectors[i].pos.x - image_width_half) * ((double) vectors[i].pos.x - image_width_half) +
+                    ((double) vectors[i].pos.y - image_height_half) * ((double) vectors[i].pos.y - image_height_half));
 
-        // Compute the norm of the flow vector and normalise it (normalisation 1)
-        flow_norm = sqrtf(dx * dx + dy * dy) ; // coeff_norm;
+            // Compute the norm of the flow vector and normalise it (normalisation 1)
+            flow_norm = sqrtf(dx * dx + dy * dy); // coeff_norm;
 
-       // PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
-        //PRINT(" pos x: %lf; pos y: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].pos.y);
-      //  PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
-      //  PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
-       // PRINT(" pos x: %lf; pox y: %lf\n",  (double)vectors[i].pos.x / subpixel_factor,  (double)vectors[i].pos.y / subpixel_factor);
-        // Decide whether the optic flow vector is on the left or on the right
-        if ((double) vectors[i].pos.y < image_width_half) {
-            divs_sum_left += flow_norm; // Left part of image considered
-            used_samples_left++;
-        } else {
-            divs_sum_right += flow_norm; // Right part of image considered
-            used_samples_right++;
+            // PRINT(" image width half: %i; image height half: %i\n", image_width_half, image_height_half);
+            //PRINT(" pos x: %lf; pos y: %lf\n", (double)vectors[i].pos.x, (double)vectors[i].pos.y);
+            //  PRINT(" pos y: %lf; flow y: %lf\n", (double)vectors[i].pos.y, (double)vectors[i].flow_y);
+            //  PRINT(" coeff norm: %lf; flow norm: %lf\n", coeff_norm, flow_norm);
+            // PRINT(" pos x: %lf; pox y: %lf\n",  (double)vectors[i].pos.x / subpixel_factor,  (double)vectors[i].pos.y / subpixel_factor);
+            // Decide whether the optic flow vector is on the left or on the right
+            if ((double) vectors[i].pos.y < image_width_half) {
+                divs_sum_left += flow_norm; // Left part of image considered
+                used_samples_left++;
+            } else {
+                divs_sum_right += flow_norm; // Right part of image considered
+                used_samples_right++;
+            }
+            used_samples++;
         }
-        used_samples++;
-
     }
 
     PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
 
-    if (used_samples_left < 1 || used_samples_right < 1){
-        return 0.f;
-    }
+//    if (used_samples_left < 1 || used_samples_right < 1){
+//        return 0.f;
+//    }
 
     // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
-    divs_sum_left_mean = divs_sum_left / used_samples_left;
-    divs_sum_right_mean = divs_sum_right / used_samples_right;
+    if (used_samples_left >= 1) {
+        divs_sum_left_mean = divs_sum_left / used_samples_left;
+    }
 
+    if (used_samples_right >= 1) {
+        divs_sum_right_mean = divs_sum_right / used_samples_right;
+    }
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
     PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left_mean, divs_sum_right_mean);
@@ -275,10 +281,10 @@ double get_difference_divergence(struct flow_t *vectors, int count, int subpixel
    // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
 
     // If this is the first time the function is called, set the old value to the new value
-    if (F_FIRST_TIME_MOVING_FILTER) {
-        divs_sum_difference_old = divs_sum_difference;
-        F_FIRST_TIME_MOVING_FILTER = false;
-    }
+//    if (F_FIRST_TIME_MOVING_FILTER) {
+//        divs_sum_difference_old = divs_sum_difference;
+//        F_FIRST_TIME_MOVING_FILTER = false;
+//    }
 //
 //    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
 //    divs_sum_difference = moving_average_filter_div_diff(divs_sum_difference, divs_sum_difference_old);

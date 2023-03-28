@@ -491,8 +491,7 @@ void opticflow_calc_init(struct opticflow_t opticflow[])
  * @return Was optical flow successful
  */
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
-                             struct opticflow_result_t *result)
-{
+                             struct opticflow_result_t *result) {
   if (opticflow->just_switched_method) {
     // Create the image buffers
     u_int16_t w_cropped = 160;
@@ -509,6 +508,22 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
 
   // Convert image to grayscale
   image_to_grayscale_cropped(img, &opticflow->img_gray);
+
+//if (opticflow->just_switched_method) {
+//// Create the image buffers
+//image_create(&opticflow->img_gray, img->w, img->h, IMAGE_GRAYSCALE);
+//image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_GRAYSCALE);
+//
+//// Set the previous values
+//opticflow->got_first_img = false;
+//
+//// Init median filters with zeros
+//InitMedianFilterVect3Float(vel_filt, MEDIAN_DEFAULT_SIZE);
+//}
+
+
+// Convert image to grayscale
+image_to_grayscale(img, &opticflow->img_gray);
 
   if (!opticflow->got_first_img) {
     image_copy(&opticflow->img_gray, &opticflow->prev_img_gray);
@@ -667,7 +682,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     // Filter vectors to get only optical flow vectors in specified region of interest
     // filter_vectors(vectors, result->tracked_cnt, filtered_vectors);
     result->div_size = get_size_divergence(vectors, result->tracked_cnt, n_samples);// * result->fps;
-    result->div_diff = get_difference_divergence(vectors, result->tracked_cnt, n_samples);
+    result->div_diff = get_difference_divergence(vectors, result->tracked_cnt, opticflow->subpixel_factor);
   } else {
     result->div_size = 0.0f;
     result->div_diff = 0.0f;

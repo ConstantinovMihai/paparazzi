@@ -172,7 +172,7 @@ void image_to_grayscale_cropped(struct image_t *input, struct image_t *output)
     uint8_t *source = input->buf;
     uint8_t *dest = output->buf;
     source++;
-    source += 240*300;
+    source += 240*300 - 2*40;
 
     // Copy the creation timestamp (stays the same)
     output->ts = input->ts;
@@ -184,7 +184,6 @@ void image_to_grayscale_cropped(struct image_t *input, struct image_t *output)
     int height = output->h;
     int width = output->w;
 
-    PRINT("width %d; height: %d \n", width, height);
     if (output->type == IMAGE_YUV422) {
         for (int y = 150; y < 370; y++) {
             source += 80 * 2;
@@ -793,11 +792,11 @@ void image_show_flow_color(struct image_t *img, struct flow_t *vectors, uint16_t
   for (uint16_t i = 0; i < points_cnt; i++) {
     // Draw a line from the original position with the flow vector
     struct point_t from = {
-      .x = vectors[i].pos.x / subpixel_factor,
+      .x = vectors[i].pos.x / subpixel_factor ,
       .y = vectors[i].pos.y / subpixel_factor
     };
     struct point_t to = {
-      .x = (uint32_t)roundf(((float)vectors[i].pos.x + vectors[i].flow_x) / subpixel_factor),
+      .x = (uint32_t)roundf(((float)vectors[i].pos.x + vectors[i].flow_x) / subpixel_factor) ,
       .y = (uint32_t)roundf(((float)vectors[i].pos.y + vectors[i].flow_y) / subpixel_factor)
     };
 

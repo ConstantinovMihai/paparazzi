@@ -100,8 +100,8 @@ float moveDistance = 0.f;                                // waypoint displacemen
 // float heading_increment_TurnAround = 8.f;               // Turn 180 [deg] CW in 45 [deg] increments to go back
 
 // Heading:
-float heading_increment = 0.f;                          // heading angle increment [deg]
-const float heading_magnitude = 15.f;                        // heading angle magnitude [deg]
+float heading_increment = 5.f;                          // heading angle increment [deg]
+const float heading_magnitude = 5.f;                        // heading angle magnitude [deg]
 float heading_increment_OOB = 1.f * heading_magnitude; // CW heading angle increment [deg]
 
 // COUNTER:
@@ -282,6 +282,8 @@ void orange_avoider_periodic(void)
           } else {
             // Turn if there is an obstacle detected with orange avoider
             increase_nav_heading(heading_increment);
+            // Stop
+            guidance_h_set_body_vel(0, 0);
           }
           break;
         case GREEN:
@@ -289,6 +291,10 @@ void orange_avoider_periodic(void)
           guidance_h_set_body_vel(0, 0);
           /////////////// NO-GREEN DETECTOR ///////////////
           increase_nav_heading(safe_heading_green * heading_magnitude);
+          
+          // Stop
+          guidance_h_set_body_vel(0, 0);
+          
           // Turn if there is an obstacle detected with green detector
           if (abs(safe_heading_green) == 0) 
           {
@@ -304,7 +310,10 @@ void orange_avoider_periodic(void)
       guidance_h_set_body_vel(0, 0);
       
       // Turn CW
-      increase_nav_heading(90.f);
+      increase_nav_heading(45.f);
+
+      // Stop
+      guidance_h_set_body_vel(0, 0);
 
       if (safe_heading_green != 404) {
         navigation_state = SAFE;

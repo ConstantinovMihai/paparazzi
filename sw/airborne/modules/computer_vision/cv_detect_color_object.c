@@ -299,8 +299,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t img_segments = 3;
     int32_t mid_segment = 1;
     int32_t cnt_green = 0;
-    int32_t cnt_other = 0;
-    float cropped_image_factor = 0.15f;
+    float cropped_image_factor = 0.1f;
     
     // define settings
     //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
@@ -360,7 +359,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         uint32_t small_w = (uint16_t) roundf(img->w * (float) cropped_image_factor);
         // Reinitialize the green count per section
         cnt_green = 0;
-        cnt_other = 0; 
+
         // Go through all the pixels
         for (uint32_t y = start_y; y < end_y; y++) {
             for (uint32_t x = 0; x < small_w; x++) {
@@ -405,12 +404,12 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// assume max is mid segment
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
-    float detectionTolerance = 1.8f;
+    float detectionTolerance = 2.0f; // 1.95f
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t minValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 1;
     bool atLeastOneAboveTh = false;
-    int32_t margin_between_min_max = 70;
+    int32_t margin_between_min_max = 60;
     bool above_th_arr[img_segments];
     
     // Check if the maximum color count is above the threshold and find the direction with the maximum color count

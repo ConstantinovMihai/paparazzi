@@ -140,8 +140,7 @@ void opticflow_module_run(void)
                              opticflow_result[idx_camera].flow_der_x,
                              opticflow_result[idx_camera].flow_der_y,
                              opticflow_result[idx_camera].noise_measurement,
-                             opticflow_result[idx_camera].div_size,
-                             opticflow_result[idx_camera].div_diff);
+                             opticflow_result[idx_camera].div_size);
 
       //TODO Find an appropriate quality measure for the noise model in the state filter, for now it is tracked_cnt
       if (opticflow_result[idx_camera].noise_measurement < 0.8) {

@@ -77,8 +77,14 @@ enum search_safe_heading_state_t {
   GREEN,
 };
 
+enum turn_around_state_t {
+  GREEN_TURN_AROUND,
+  DIV_SIZE,
+};
+
 enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING;
 enum search_safe_heading_state_t search_safe_heading_state = ORANGE;
+enum turn_around_state_t turn_around_state = GREEN;
 
 // Orange avoider:
 int32_t color_count = 0;                                 // orange color count from color filter for obstacle detection
@@ -90,8 +96,13 @@ float oa_floor_count_frac = 0.065f;                       // floor detection thr
 
 int32_t safe_heading_green = 0;                          // safe heading for green detection
 
+float div_size = 0;                                      // divergence size from optical flow for obstacle detection
+float divergence_threshold = 0.0085;                      // threshold for the divergence value for optical flow object detection
+
 int16_t obstacle_free_confidence_orange = 0;             // a measure of how certain we are that the way ahead is safe for orange detection
+int16_t obstacle_free_confidence_opticalflow = 0;        // a measure of how certain we are that the way ahead is safe for optical flow
 const int16_t max_trajectory_confidence_orange = 5;      // number of consecutive negative object detections to be sure we are obstacle free for orange detection
+const int16_t max_trajectory_confidence_opticalflow = 5; // number of consecutive negative object detections to be sure we are obstacle free for optical flow detection
 
 // Distances:
 float maxDistance = 0.8;                                 // max waypoint displacement [m]
@@ -103,9 +114,6 @@ float moveDistance = 0.f;                                // waypoint displacemen
 float heading_increment = 5.f;                          // heading angle increment [deg]
 const float heading_magnitude = 5.f;                        // heading angle magnitude [deg]
 float heading_increment_OOB = 1.f * heading_magnitude; // CW heading angle increment [deg]
-
-// COUNTER:
-int16_t C_ROBUSTNESS = 0;
 
 // Debugging:
 enum navigation_state_t previous_state = SAFE;           // previous state
@@ -141,24 +149,22 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
 }
 
 
-// //// Receive ABI message from opticflow_module.c, where the divergence value is of interest
-// #ifndef OPTICAL_FLOW_ID
-// #define OPTICAL_FLOW_ID ABI_BROADCAST
-// #endif
-// static abi_event optical_flow_ev;
-// static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
-//                             uint32_t __attribute__((unused)) stamp, 
-//                             int32_t __attribute__((unused)) flow_x,
-//                             int32_t __attribute__((unused)) flow_y,
-//                             int32_t __attribute__((unused)) flow_der_x,
-//                             int32_t __attribute__((unused)) flow_der_y,
-//                             float __attribute__((unused)) quality, 
-//                             float size_divergence,
-//                             double diff_divergence) 
-// {
-//   div_size = size_divergence;
-//   div_diff = diff_divergence;
-// }
+//// Receive ABI message from opticflow_module.c, where the divergence value is of interest
+#ifndef OPTICAL_FLOW_ID
+#define OPTICAL_FLOW_ID ABI_BROADCAST
+#endif
+static abi_event optical_flow_ev;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+                            uint32_t __attribute__((unused)) stamp, 
+                            int32_t __attribute__((unused)) flow_x,
+                            int32_t __attribute__((unused)) flow_y,
+                            int32_t __attribute__((unused)) flow_der_x,
+                            int32_t __attribute__((unused)) flow_der_y,
+                            float __attribute__((unused)) quality, 
+                            float size_divergence) 
+{
+  div_size = size_divergence;;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     ////// RUN AUTOPILOT INIT FUNCTION //////
@@ -175,7 +181,7 @@ void orange_avoider_init(void)
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
   //// Bind the optical flow callbacks to receive the divergence values
-  // AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
+  AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,18 +208,31 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
 
+  if (div_size < divergence_threshold) {
+    obstacle_free_confidence_opticalflow++;
+  } else {
+    obstacle_free_confidence_opticalflow -= 1; // Be more cautious with positive obstacle detections
+  }
+
   // Bound obstacle_free_confidence_orange
   Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange);
 
+  // Bound obstacle_free_confidence_opticalflow
+  Bound(obstacle_free_confidence_opticalflow, 0, max_trajectory_confidence_opticalflow);
+
   ////// PRINT DETECTION VALUES //////
-  PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
+  // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print visual detection pixel colour values and navigation state
   // PRINT("[GREEN] Counter No Green: %d; Green Count: %d; Green Threshold: %d \n", C_ROBUST_NO_GREEN, floor_count, floor_count_threshold); // Print visual detection pixel colour values.
 
   // Print safe heading green
-  PRINT("[GREEN] SafeSafe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
+  // PRINT("[GREEN] SafeSafe Heading: %d \n", safe_heading_green); // Print visual detection pixel colour values and navigation state
 
   // Print obstacle free confidence orange
   //PRINT("[ORANGE] Obstacle Free Confidence: %d \n", obstacle_free_confidence_orange); // Print visual detection pixel colour values and navigation state
+  
+  // Print div_size
+  PRINT("[OPTICAL_FLOW] Obstacle Free Confidence: %d; div_size: %lf \n", obstacle_free_confidence_opticalflow, div_size); // Print visual detection pixel colour values and navigation state
+
 
   // Print current state and possible safe heading caller
   if (previous_state != navigation_state) {
@@ -223,7 +242,10 @@ void orange_avoider_periodic(void)
   // PRINT("[STATE] State: %d \n", navigation_state); // Print visual detection pixel colour values and navigation state
 
   // Distance waypoint moves ahead of drone -> compares both orange avoider and optical flow confidences followed by the maxDistance comparison and takes the min value out of all of them
-  moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
+  // moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence_orange);
+
+  float moveDistance_temp = fminf(0.2f * obstacle_free_confidence_orange, 0.2f * obstacle_free_confidence_opticalflow);
+  float moveDistance = fminf(maxDistance, moveDistance_temp);
 
   ////// NAVIGATION STATE MACHINE //////
   switch (navigation_state) {
@@ -233,40 +255,33 @@ void orange_avoider_periodic(void)
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) 
       {
         navigation_state = OUT_OF_BOUNDS;
-      } else if (safe_heading_green == 404) {
-        navigation_state = TURN_AROUND;
       } else if (obstacle_free_confidence_orange == 0) {
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = ORANGE;
-      } else if (abs(safe_heading_green) == 1) 
-      {
+      } else if (abs(safe_heading_green) == 1) {
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = GREEN;
-      } else 
-      {
+      } else if (safe_heading_green == 404) {
+        navigation_state = TURN_AROUND;
+        turn_around_state = GREEN_TURN_AROUND;
+      } else if (obstacle_free_confidence_opticalflow == 0) {
+        navigation_state = TURN_AROUND;
+        turn_around_state = DIV_SIZE;
+      } else {
         moveWaypointForward(WP_GOAL, moveDistance);
       }
 
-      // Increment the counter for the number of times the drone has been in the safe state
-      C_ROBUSTNESS++;
-      // PRINT("ROBUSTNESS (SAFE): %d \n", C_ROBUSTNESS);
-
       // If next state is to search for a safe heading, set the heading increment
       if (navigation_state == SEARCH_SAFE_HEADING) {
-        // if (C_ROBUSTNESS < 1) {
-          // navigation_state = SAFE;
-        //} 
-        // else {
-          // PRINT("Robustness exceeded 10, going to search safe heading called by %d \n", search_safe_heading_state);
           chooseRandomIncrementAvoidance();
-          // C_ROBUSTNESS = 0;
-        // }
       }
 
       break;
     case SEARCH_SAFE_HEADING:
       if (previous_state != navigation_state) {
         PRINT("[STATE] Search Safe Heading [CALLED BY] %d", search_safe_heading_state);
+        PRINT("[STATE] Turn Around [CALLED BY] %d", turn_around_state);
+
       }
 
       // Stop
@@ -282,8 +297,6 @@ void orange_avoider_periodic(void)
           } else {
             // Turn if there is an obstacle detected with orange avoider
             increase_nav_heading(heading_increment);
-            // Stop
-            guidance_h_set_body_vel(0, 0);
           }
           break;
         case GREEN:
@@ -291,9 +304,6 @@ void orange_avoider_periodic(void)
           guidance_h_set_body_vel(0, 0);
           /////////////// NO-GREEN DETECTOR ///////////////
           increase_nav_heading(safe_heading_green * heading_magnitude);
-          
-          // Stop
-          guidance_h_set_body_vel(0, 0);
           
           // Turn if there is an obstacle detected with green detector
           if (abs(safe_heading_green) == 0) 
@@ -309,16 +319,32 @@ void orange_avoider_periodic(void)
       // Stop
       guidance_h_set_body_vel(0, 0);
       
-      // Turn CW
-      increase_nav_heading(45.f);
+      switch (turn_around_state) {
+        case GREEN_TURN_AROUND:
+          // Stop
+          guidance_h_set_body_vel(0, 0);
 
-      // Stop
-      guidance_h_set_body_vel(0, 0);
+          // Turn CW
+          increase_nav_heading(45.f);
 
-      if (safe_heading_green != 404) {
-        navigation_state = SAFE;
+          if (safe_heading_green != 404) {
+            navigation_state = SAFE;
+          }
+        break;
+        case DIV_SIZE:
+          // Stop
+          guidance_h_set_body_vel(0, 0);
+
+          // Turn CW
+          increase_nav_heading(10.f);
+          
+          if (obstacle_free_confidence_opticalflow >= 2){ 
+            navigation_state = SAFE;
+          }
+        break;
+      default:
+        break;
       }
-
       break;
     case OUT_OF_BOUNDS:
       // Stop
@@ -335,14 +361,11 @@ void orange_avoider_periodic(void)
         increase_nav_heading(heading_increment_OOB);
         // Set confidence to 0
         obstacle_free_confidence_orange = 0;
-        // Set robustness counter to 0
-        C_ROBUSTNESS = 0;
+        obstacle_free_confidence_opticalflow = 0;
         // Assume there is an obstacle to be safe (just in case)
         navigation_state = SAFE;
-        // search_safe_heading_state = ORANGE;
         // Set the heading increment to CW
         heading_increment = heading_increment_OOB;
-        //PRINT("[STATE] SAFE [CALLED BY] OOB");
       }
       break;
     default:

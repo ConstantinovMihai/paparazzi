@@ -299,6 +299,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t img_segments = 3;
     int32_t mid_segment = 1;
     int32_t cnt_green = 0;
+    int32_t cnt_other = 0;
+    float cropped_image_factor = 0.15f;
     
     // define settings
     //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
@@ -355,13 +357,13 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         // Determine the start and end of each of the possible heading sections
         uint32_t start_y = (uint16_t) roundf(i * img->h / (float) img_segments);
         uint32_t end_y = (uint16_t) roundf((i + 1) * img->h / (float) img_segments);
-
+        uint32_t small_w = (uint16_t) roundf(img->w * (float) cropped_image_factor);
         // Reinitialize the green count per section
         cnt_green = 0;
-
+        cnt_other = 0; 
         // Go through all the pixels
         for (uint32_t y = start_y; y < end_y; y++) {
-            for (uint32_t x = 0; x < img->w; x++) {
+            for (uint32_t x = 0; x < small_w; x++) {
                 // Check if the color is inside the specified values
                 uint8_t *yp_green, *up_green, *vp_green;
                 if (x % 2 == 0) {
@@ -392,7 +394,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
 
         /// Compute the green threshold per section
         /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
-        floor_threshold_per_segment_arr[i] = oag_floor_count_frac * (end_y-start_y) * img->w;
+        floor_threshold_per_segment_arr[i] = oag_floor_count_frac * (end_y-start_y) * small_w;
         //Compute the green color count per each of the segments of the photo
         color_count_per_img_segment_arr[i] = cnt_green;
     }
@@ -449,7 +451,6 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         *direction = 404; // error turn back
     }
     *floor_color_count_img_segment = maxValue;
-
 
 
 

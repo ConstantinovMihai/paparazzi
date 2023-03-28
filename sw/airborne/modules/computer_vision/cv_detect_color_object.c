@@ -355,8 +355,10 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         // Determine the start and end of each of the possible heading sections
         uint32_t start_y = (uint16_t) roundf(i * img->h / (float) img_segments);
         uint32_t end_y = (uint16_t) roundf((i + 1) * img->h / (float) img_segments);
-        // reinitialize the green count per section
+
+        // Reinitialize the green count per section
         cnt_green = 0;
+
         // Go through all the pixels
         for (uint32_t y = start_y; y < end_y; y++) {
             for (uint32_t x = 0; x < img->w; x++) {
@@ -388,42 +390,6 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
             }
         }
 
-        // for (uint32_t x = start_x; x < end_x; x++)
-        // {
-        //     for (uint32_t y = 0; y < img->h; y++)
-        //     {
-        //         // Check if the color is inside the specified values
-        //         uint8_t *yp_green, *up_green, *vp_green;
-        //         if (x % 2 == 0) {
-        //             // Even x
-        //             up_green = &buffer[x * 2 * (end_x-start_x)*i + 2 * y];      // U
-        //             yp_green = &buffer[x * 2 * (end_x-start_x)*i + 2 * y + 1];  // Y1
-        //             vp_green = &buffer[x * 2 * (end_x-start_x)*i + 2 * y + 2];  // V
-        //             //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
-        //         } else {
-        //             // Uneven x
-        //             up_green = &buffer[x * 2 * (end_x-start_x)*i + 2 * y - 2];  // U
-        //             //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-        //             vp_green = &buffer[x * 2 * (end_x-start_x)*i + 2 * y];      // V
-        //             yp_green = &buffer[x * 2 * (end_x-start_x)*i + 2 * y + 1];  // Y2
-        //         }
-
-        //         /// GREEN/FLOOR/
-        //         // if pixel is green count it for the total per section and make it black; maybe make it black
-        //         if ((*yp_green >= lum_min_floor) && (*yp_green <= lum_max_floor) &&
-        //             (*up_green >= cb_min_floor) && (*up_green <= cb_max_floor) &&
-        //             (*vp_green >= cr_min_floor) && (*vp_green <= cr_max_floor)) {
-        //             cnt_green++;
-        //             /// Comment in if you want to DRAW white over detected pixels
-        //             // tot_x += x;
-        //             // tot_y += y;
-        //             if (draw) {
-        //                *yp_green = 0;  // make pixel dark in the image
-        //             }
-        //         }
-                
-        //     }
-        // }
         /// Compute the green threshold per section
         /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
         floor_threshold_per_segment_arr[i] = oag_floor_count_frac * (end_y-start_y) * img->w;

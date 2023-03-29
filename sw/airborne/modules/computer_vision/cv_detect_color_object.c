@@ -386,7 +386,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     (*vp_green >= cr_min_floor) && (*vp_green <= cr_max_floor)) {
                     cnt_green++;
                     // TODO: remove the following line when debugging is over
-                   // *yp_green = 0;  // make pixel dark in the image
+                    *yp_green = 0;  // make pixel dark in the image
                 }
             }
         }

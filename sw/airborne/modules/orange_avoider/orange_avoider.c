@@ -96,7 +96,7 @@ int32_t safe_heading_green = 0;                          // Safe heading for gre
 
 // Optical flow detector:
 float div_size = 0;                                      // Divergence size for obstacle detection
-float divergence_threshold = 0.065f;                     // Threshold for the divergence size 
+float divergence_threshold = 0.065f;                     // Threshold for the divergence size
 
 int16_t obstacle_free_confidence_orange = 0;             // Measure of how certain we are that the way ahead is safe for orange detection
 int16_t obstacle_free_confidence_floor = 0;

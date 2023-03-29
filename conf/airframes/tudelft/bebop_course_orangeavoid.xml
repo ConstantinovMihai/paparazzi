@@ -19,13 +19,21 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="150"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="190"/>
 
-      <!-- Detect green/floor -->
+      <!-- Detect floor -->
       <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="90"/>  
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="185"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="75"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="105"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="130"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="160"/>
+
+      <!-- Detect thin plant green -->
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT" value="40"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2_PLANT" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2_PLANT" value="75"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2_PLANT" value="105"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2_PLANT" value="120"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2_PLANT" value="150"/>
       
       <!-- <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="80"/>  
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="190"/>
@@ -47,13 +55,21 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="134"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
 
-      <!-- Detect green/floor -->
+      <!-- Detect floor -->
       <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="110"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="130"/>
+      
+      <!-- Detect thin plant green -->
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT" value="40"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2_PLANT" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2_PLANT" value="75"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2_PLANT" value="105"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2_PLANT" value="120"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2_PLANT" value="150"/>
     </target>
     
     <define name="ARRIVED_AT_WAYPOINT" value="0.5"/><!-- Detect arrival at waypoint when within 0.5m -->

@@ -241,7 +241,7 @@ void orange_avoider_periodic(void)
   // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print obstacle free confidence for orange and visual detection pixel colour values
   
   // Floor/Green detection:
-  PRINT("[GREEN] Obstacle Free Confidence: %d; Safe Heading: %d \n", obstacle_free_confidence_floor, safe_heading_green); // Print safe heading green
+  // PRINT("[GREEN] Obstacle Free Confidence: %d; Safe Heading: %d \n", obstacle_free_confidence_floor, safe_heading_green); // Print safe heading green
 
   // Divergence size detection:
   // PRINT("[DIV_SIZE] Obstacle Free Confidence: %d; Size: %lf; Threshold: %f \n", obstacle_free_confidence_div_size, div_size, divergence_threshold); // Print div_size
@@ -310,13 +310,15 @@ void orange_avoider_periodic(void)
       break;
     case SEARCH_SAFE_HEADING:
       // Stop
-      guidance_h_set_body_vel(0, 0);
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
 
       switch (search_safe_heading_state) {
         //// Orange detection ////
         case ORANGE:
-          // Stop
-          guidance_h_set_body_vel(0, 0);
+        // Stop
+        waypoint_move_here_2d(WP_GOAL);
+        waypoint_move_here_2d(WP_TRAJECTORY);
 
           // If confident there is no obstacle -> set navigation state to SAFE
           // If not confident and an obstacle is still detected, keep on turning
@@ -329,8 +331,9 @@ void orange_avoider_periodic(void)
           break;
         //// Floor/No-Green detection ////
         case GREEN:
-          // Stop
-          guidance_h_set_body_vel(0, 0);
+        // Stop
+        waypoint_move_here_2d(WP_GOAL);
+        waypoint_move_here_2d(WP_TRAJECTORY);
 
           // Continuosly turn using safe_heading_green (-1, 0, 1) until no obstacle is detected anymore
           increase_nav_heading(safe_heading_green * heading_magnitude);
@@ -348,13 +351,15 @@ void orange_avoider_periodic(void)
       break;
     case TURN_AROUND:
       // Stop
-      guidance_h_set_body_vel(0, 0);
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
       
       switch (turn_around_state) {
         //// Floor/No-Green detection -> "ERROR 404" ////
         case GREEN_TURN_AROUND:
           // Stop
-          guidance_h_set_body_vel(0, 0);
+          waypoint_move_here_2d(WP_GOAL);
+          waypoint_move_here_2d(WP_TRAJECTORY);
 
           // Turn CW
           increase_nav_heading(heading_increment_TA);
@@ -368,8 +373,9 @@ void orange_avoider_periodic(void)
         break;
         //// Divergence Size Detection ////
         case DIV_SIZE:
-          // Stop
-          guidance_h_set_body_vel(0, 0);
+        // Stop
+        waypoint_move_here_2d(WP_GOAL);
+        waypoint_move_here_2d(WP_TRAJECTORY);
 
           // Turn CW
           increase_nav_heading(heading_increment_TA);
@@ -392,7 +398,8 @@ void orange_avoider_periodic(void)
       break;
     case OUT_OF_BOUNDS:
       // Stop
-      guidance_h_set_body_vel(0, 0);
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
       
       // Turn CW
       increase_nav_heading(heading_increment_OOB);

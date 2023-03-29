@@ -78,8 +78,13 @@ uint8_t cod_cb_max1_floor;
 uint8_t cod_cr_min1_floor;
 uint8_t cod_cr_max1_floor;
 
-
-
+// Module settings new to include the green thin plant detection
+uint8_t cod_lum_min1_plant;
+uint8_t cod_lum_max1_plant;
+uint8_t cod_cb_min1_plant;
+uint8_t cod_cb_max1_plant;
+uint8_t cod_cr_min1_plant;
+uint8_t cod_cr_max1_plant;
 
 ////PART1/3: DEFINE THE SIGNATURE OF THE FUNCTION
 // define global variables
@@ -116,7 +121,10 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                               uint8_t cr_min, uint8_t cr_max,
                               uint8_t lum_min_floor, uint8_t lum_max_floor,
                               uint8_t cb_min_floor, uint8_t cb_max_floor,
-                              uint8_t cr_min_floor, uint8_t cr_max_floor);
+                              uint8_t cr_min_floor, uint8_t cr_max_floor,
+                              uint8_t lum_min_plant, uint8_t lum_max_plant,
+                              uint8_t cb_min_plant, uint8_t cb_max_plant,
+                              uint8_t cr_min_plant ,uint8_t cr_max_plant);
 
 
 
@@ -139,6 +147,10 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   uint8_t cb_min_floor, cb_max_floor;
   uint8_t cr_min_floor, cr_max_floor;
 
+  uint8_t lum_min_plant, lum_max_plant;
+  uint8_t cb_min_plant, cb_max_plant;
+  uint8_t cr_min_plant, cr_max_plant;
+
   switch (filter){
     case 1:
       lum_min = cod_lum_min1;
@@ -155,7 +167,16 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
       cb_max_floor = cod_cb_max1_floor;
       cr_min_floor = cod_cr_min1_floor;
       cr_max_floor = cod_cr_max1_floor;
+
+      lum_min_plant = cod_lum_min1_plant;
+      lum_max_plant = cod_lum_max1_plant;
+      cb_min_plant = cod_cb_min1_plant;
+      cb_max_plant = cod_cb_max1_plant;
+      cr_min_plant = cod_cr_min1_plant;
+      cr_max_plant = cod_cr_max1_plant;
+      
       draw = cod_draw1;
+      
       break;
     case 2:
       lum_min = cod_lum_min2;
@@ -172,6 +193,13 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
       cb_max_floor = cod_cb_max1_floor;
       cr_min_floor = cod_cr_min1_floor;
       cr_max_floor = cod_cr_max1_floor;
+
+      lum_min_plant = cod_lum_min1_plant;
+      lum_max_plant = cod_lum_max1_plant;
+      cb_min_plant = cod_cb_min1_plant;
+      cb_max_plant = cod_cb_max1_plant;
+      cr_min_plant = cod_cr_min1_plant;
+      cr_max_plant = cod_cr_max1_plant;
       break;
     default:
       return img;
@@ -183,7 +211,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   int32_t floor_color_count_img_segment;
 
   // Filter and find centroid
-  uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, &direction, &floor_color_count_img_segment, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor);
+  uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, &direction, &floor_color_count_img_segment, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max, lum_min_floor, lum_max_floor, cb_min_floor, cb_max_floor, cr_min_floor, cr_max_floor, lum_min_plant, lum_max_plant, cb_min_plant, cb_max_plant, cr_min_plant, cr_max_plant);
   VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
@@ -234,6 +262,13 @@ void color_object_detector_init(void) {
     cod_cb_max1_floor = COLOR_OBJECT_DETECTOR_CB_MAX2;
     cod_cr_min1_floor = COLOR_OBJECT_DETECTOR_CR_MIN2;
     cod_cr_max1_floor = COLOR_OBJECT_DETECTOR_CR_MAX2;
+
+    cod_lum_min1_plant = COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT;
+    cod_lum_max1_plant = COLOR_OBJECT_DETECTOR_LUM_MAX2_PLANT;
+    cod_cb_min1_plant = COLOR_OBJECT_DETECTOR_CB_MIN2_PLANT;
+    cod_cb_max1_plant = COLOR_OBJECT_DETECTOR_CB_MAX2_PLANT;
+    cod_cr_min1_plant = COLOR_OBJECT_DETECTOR_CR_MIN2_PLANT;
+    cod_cr_max1_plant = COLOR_OBJECT_DETECTOR_CR_MAX2_PLANT;
 #endif
 #ifdef COLOR_OBJECT_DETECTOR_DRAW1
     cod_draw1 = COLOR_OBJECT_DETECTOR_DRAW1;
@@ -280,13 +315,16 @@ void color_object_detector_init(void) {
  * @return number of pixels of image within the filter bounds.
  */
 uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc, bool draw,
-                                  int32_t *direction, int32_t *floor_color_count_img_segment,
-                                  uint8_t lum_min, uint8_t lum_max,
-                                  uint8_t cb_min, uint8_t cb_max,
-                                  uint8_t cr_min, uint8_t cr_max,
-                                  uint8_t lum_min_floor, uint8_t lum_max_floor,
-                                  uint8_t cb_min_floor, uint8_t cb_max_floor,
-                                  uint8_t cr_min_floor, uint8_t cr_max_floor)
+                                int32_t *direction, int32_t *floor_color_count_img_segment,
+                                uint8_t lum_min, uint8_t lum_max,
+                                uint8_t cb_min, uint8_t cb_max,
+                                uint8_t cr_min, uint8_t cr_max,
+                                uint8_t lum_min_floor, uint8_t lum_max_floor,
+                                uint8_t cb_min_floor, uint8_t cb_max_floor,
+                                uint8_t cr_min_floor, uint8_t cr_max_floor, 
+                                uint8_t lum_min_plant, uint8_t lum_max_plant,
+                                uint8_t cb_min_plant, uint8_t cb_max_plant,
+                                uint8_t cr_min_plant ,uint8_t cr_max_plant)
 {
     uint32_t cnt_orange = 0; /// color count for obstacle i.e. orange
     uint32_t tot_x = 0;
@@ -299,12 +337,14 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t img_segments = 3;
     int32_t mid_segment = 1;
     int32_t cnt_green = 0;
+    int32_t cnt_green_plant = 0;
     float cropped_image_factor = 0.1f;
     
     // define settings
     //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
     float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
     int32_t color_count_per_img_segment_arr[img_segments]; /// array storing number of green pixels for each of the 5 segments of the photo
+    int32_t color_count_per_img_segment_arr_plant[img_segments]; /// array storing number of green pixels for each of the 5 segments of the photo
     int64_t floor_threshold_per_segment_arr[img_segments];
 
     // ORANGE
@@ -379,7 +419,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     yp_green = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
                 }
 
-                /// GREEN/FLOOR/
+                /// GREEN/FLOOR
                 // if pixel is green count it for the total per section and make it black; maybe make it black
                 if ((*yp_green >= lum_min_floor) && (*yp_green <= lum_max_floor) &&
                     (*up_green >= cb_min_floor) && (*up_green <= cb_max_floor) &&
@@ -388,15 +428,25 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     // TODO: remove the following line when debugging is over
                     *yp_green = 0;  // make pixel dark in the image
                 }
+
+                // GREEN/PLANT
+                // if pixel is green count it for the total per section and make it black; maybe make it black
+                if ((*yp_green >= lum_min_plant) && (*yp_green <= lum_max_plant) &&
+                    (*up_green >= cb_min_plant) && (*up_green <= cb_max_plant) &&
+                    (*vp_green >= cr_min_plant) && (*vp_green <= cr_max_plant)) {
+                    cnt_green_plant++;
+                    *yp_green = 255;  // make pixel bright in the image
+                }
             }
         }
-
         /// Compute the green threshold per section
         /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
         floor_threshold_per_segment_arr[i] = oag_floor_count_frac * (end_y-start_y) * small_w;
         //Compute the green color count per each of the segments of the photo
         color_count_per_img_segment_arr[i] = cnt_green;
+        color_count_per_img_segment_arr_plant[i] = cnt_green_plant;
     }
+  
 
 
     // after you iterated over all image segments
@@ -404,14 +454,19 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// assume max is mid segment
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
-    float detectionTolerance = 2.1f; // 1.95f
+    float detectionTolerance = 2.0f; // 1.95f
+    int32_t plant_greenThreshold = 300;
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t minValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 1;
     bool atLeastOneAboveTh = false;
     int32_t margin_between_min_max = 60;
+    bool plant_detection;
     bool above_th_arr[img_segments];
-    
+
+    // Check if the plant is detected
+    plant_detection = color_count_per_img_segment_arr_plant[mid_segment] >= plant_greenThreshold; 
+        
     // Check if the maximum color count is above the threshold and find the direction with the maximum color count
     for (int i = 0; i < img_segments; i++) {
         above_th_arr[i] = color_count_per_img_segment_arr[i] >= floor_threshold_per_segment_arr[i]*detectionTolerance;
@@ -437,8 +492,13 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         maxIndex = 3; // corresponds to 404 direction value (other than 0, 1 and 2)
     }
 
-    // PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
-    // PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+    if (plant_detection == true) {
+        maxIndex = 3;
+    }
+
+    PRINT("[PLANT] Colour count: %ld; Threshold: %d; Detection: %d \n", color_count_per_img_segment_arr_plant[mid_segment], plant_greenThreshold, plant_detection);
+    //PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+   // PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
     // set output variables
     if (maxIndex == 0) {
         *direction = -1;
@@ -450,6 +510,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         *direction = 404; // error turn back
     }
     *floor_color_count_img_segment = maxValue;
+
+
 
 
     return cnt_orange;

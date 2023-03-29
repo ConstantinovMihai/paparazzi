@@ -339,6 +339,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t cnt_green = 0;
     int32_t cnt_green_plant = 0;
     float cropped_image_factor = 0.1f;
+    float cropped_image_factor_plant = 0.2f;
     
     // define settings
     //float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
@@ -389,7 +390,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         *p_yc = 0;
     }
 
-    //GREEN
+    //////////////////////// GREEN/FLOOR ////////////////////////
     // iterate over all possible headings from the image
     for (int i = 0; i < img_segments; i++)
     {
@@ -428,6 +429,44 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                     // TODO: remove the following line when debugging is over
                     *yp_green = 0;  // make pixel dark in the image
                 }
+            }
+        }
+        /// Compute the green threshold per section
+        /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
+        floor_threshold_per_segment_arr[i] = oag_floor_count_frac * (end_y-start_y) * small_w;
+        //Compute the green color count per each of the segments of the photo
+        color_count_per_img_segment_arr[i] = cnt_green;
+    }
+
+    //////////////////////// GREEN/PLANT //////////////////////// 
+    // iterate over all possible headings from the image
+    for (int i = 0; i < img_segments; i++)
+    {
+        // Determine the start and end of each of the possible heading sections
+        uint32_t start_y = (uint16_t) roundf(i * img->h / (float) img_segments);
+        uint32_t end_y = (uint16_t) roundf((i + 1) * img->h / (float) img_segments);
+        uint32_t small_w = (uint16_t) roundf(img->w * (float) cropped_image_factor_plant);
+        // Reinitialize the green count per section
+        cnt_green_plant = 0;
+
+        // Go through all the pixels
+        for (uint32_t y = start_y; y < end_y; y++) {
+            for (uint32_t x = 0; x < small_w; x++) {
+                // Check if the color is inside the specified values
+                uint8_t *yp_green, *up_green, *vp_green;
+                if (x % 2 == 0) {
+                    // Even x (Grayscale)
+                    up_green = &buffer[y * 2 * img->w + 2 * x];      // U
+                    yp_green = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+                    vp_green = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+                    //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+                } else {
+                    // Odd x (Colour)
+                    up_green = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+                    //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+                    vp_green = &buffer[y * 2 * img->w + 2 * x];      // V
+                    yp_green = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+                }
 
                 // GREEN/PLANT
                 // if pixel is green count it for the total per section and make it black; maybe make it black
@@ -439,11 +478,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
                 }
             }
         }
-        /// Compute the green threshold per section
-        /// (NEW) WAY OF COMPUTING FLOOR THRESHOLD; adjust the orange_avoider_guided_threshold
-        floor_threshold_per_segment_arr[i] = oag_floor_count_frac * (end_y-start_y) * small_w;
-        //Compute the green color count per each of the segments of the photo
-        color_count_per_img_segment_arr[i] = cnt_green;
+
+        // Compute the green color count per each of the segments of the photo
         color_count_per_img_segment_arr_plant[i] = cnt_green_plant;
     }
   
@@ -455,7 +491,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
     float detectionTolerance = 2.0f; // 1.95f
-    int32_t plant_greenThreshold = 300;
+    int32_t plant_greenThreshold = 750;
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t minValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 1;
@@ -463,8 +499,13 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t margin_between_min_max = 60;
     bool plant_detection;
     bool above_th_arr[img_segments];
+    // int32_t total_plant_green = 0;
 
     // Check if the plant is detected
+    // total_plant_green += color_count_per_img_segment_arr_plant[mid_segment];
+    // total_plant_green += color_count_per_img_segment_arr_plant[0];
+    // total_plant_green += color_count_per_img_segment_arr_plant[2];
+
     plant_detection = color_count_per_img_segment_arr_plant[mid_segment] >= plant_greenThreshold; 
         
     // Check if the maximum color count is above the threshold and find the direction with the maximum color count

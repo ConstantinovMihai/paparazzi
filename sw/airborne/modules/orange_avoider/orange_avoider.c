@@ -309,6 +309,9 @@ void orange_avoider_periodic(void)
       }
       break;
     case SEARCH_SAFE_HEADING:
+      if (previous_state != navigation_state) {
+        PRINT("[STATE] Search Safe Heading [CALLED BY] %d", search_safe_heading_state);
+      }
       // Stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -350,6 +353,10 @@ void orange_avoider_periodic(void)
       }
       break;
     case TURN_AROUND:
+    if (previous_state != navigation_state) {
+      PRINT("[STATE] Turn Around [CALLED BY] %d", turn_around_state);
+    }
+
       // Stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);

@@ -28,7 +28,7 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="160"/>
 
       <!-- Detect thin plant green -->
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT" value="40"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT" value="55"/>
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2_PLANT" value="100"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2_PLANT" value="75"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX2_PLANT" value="105"/>
@@ -64,7 +64,7 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="130"/>
       
       <!-- Detect thin plant green -->
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT" value="40"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2_PLANT" value="55"/>
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2_PLANT" value="100"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2_PLANT" value="75"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX2_PLANT" value="105"/>

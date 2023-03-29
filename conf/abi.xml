@@ -181,12 +181,14 @@
       <field name="yaw"    type="float">Radio-Control Manual Yaw Setpoint</field>
     </message>
 
-    <message name="VISUAL_DETECTION" id="27">
+   <message name="VISUAL_DETECTION" id="27">
       <field name="pixel_x"      type="int16_t">Center pixel X</field>
       <field name="pixel_y"      type="int16_t">Center pixel Y</field>
       <field name="pixel_width"  type="int16_t">Width in pixels</field>
       <field name="pixel_height" type="int16_t">Height in pixels</field>
       <field name="quality"      type="int32_t">Detection quality</field>
+      <field name="direction" type="int32_t">Recommended heading from floor detection based on image segmentation </field>
+      <field name="floor_color_count_img_segment" type="int32_t">Green count per safe heading image segment </field>
       <field name="extra"        type="int16_t">Extra field for options like detector source etc</field>
     </message>
 

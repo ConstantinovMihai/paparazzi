@@ -260,7 +260,7 @@ double get_difference_divergence(struct flow_t *vectors, int count, int subpixel
         }
     }
 
-    PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
+    // PRINT(" used samples left: %d; used samples right: %d\n", used_samples_left, used_samples_right);
 
 //    if (used_samples_left < 1 || used_samples_right < 1){
 //        return 0.f;
@@ -276,7 +276,7 @@ double get_difference_divergence(struct flow_t *vectors, int count, int subpixel
     }
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
-    PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left_mean, divs_sum_right_mean);
+    // PRINT(" divs left: %lf; divs right: %lf\n", divs_sum_left_mean, divs_sum_right_mean);
 
    // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
 

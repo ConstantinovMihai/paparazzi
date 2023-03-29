@@ -219,6 +219,8 @@ void orange_avoider_periodic(void)
   } else {
     obstacle_free_confidence_orange -= 2; // Be more cautious with positive obstacle detections
   }
+    struct  FloatRates* rates = stateGetBodyRates_f();
+  float r = rates->p; // yaw rate
 
   if (div_size < divergence_threshold) {
     obstacle_free_confidence_opticalflow++;
@@ -229,7 +231,7 @@ void orange_avoider_periodic(void)
     // Div difference
   if (fabs(div_diff) < divergence_difference_threshold) {
     obstacle_free_confidence_div_diff++;
-  } else {
+  } else if (r < 0.01) { // only update confidence when drone is not rotating
     obstacle_free_confidence_div_diff -= 1; // Be more cautious with positive obstacle detections
   }
 

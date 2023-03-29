@@ -14,13 +14,11 @@ of green drops below a given threshold we detect an object and turn. The color d
 define which filter to use.
       </description>
     <define name="ORANGE_AVOIDER_VISUAL_DETECTION_ID" value="ABI_BROADCAST" description="which VISUAL_DETECTION message to recieve for orange pole detection."/>
-    <define name="FLOOR_VISUAL_DETECTION_ID" value="ABI_BROADCAST" description="which VISUAL_DETECTION message to recieve for floor detection."/>
   </doc>
   <settings>
     <dl_settings>
       <dl_settings name="OrangeAvoider">
          <dl_setting var="oa_color_count_frac" min="0" step="0.01" max="0.5"/>
-         <dl_setting var="oa_floor_count_frac" min="0" step="0.01" max="0.5"/>
       </dl_settings>
     </dl_settings>
   </settings>
@@ -32,7 +30,7 @@ define which filter to use.
     <file name="orange_avoider.h"/>
   </header>
   <init fun="orange_avoider_init()"/>
-  <periodic fun="orange_avoider_periodic()" freq="10"/>
+  <periodic fun="orange_avoider_periodic()" freq="8"/>
   <makefile target="ap|nps">
     <file name="orange_avoider.c"/>
   </makefile>

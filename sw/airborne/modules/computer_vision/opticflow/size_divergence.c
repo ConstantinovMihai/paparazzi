@@ -53,21 +53,20 @@ bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x
     }
 }
 
-int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *filtered_vectors)
-{
+int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *filtered_vectors) {
     // Define factors for cropping in the horizontal and vertical axes
-    float h_factor = 0.7;
-    float w_factor = 1.0;
+    float h_factor = 0.5;
+    float w_factor = 0.7;
     float scale = 100;
 
     // Get all points of cropped image in original bounds -> Region of Interest
     // Horizontal Region of Interest
-    int32_t top_left_horizontal = (0.5f * front_camera.output_size.h * (1.f - w_factor)) * scale;
-    int32_t top_right_horizontal = top_left_horizontal + (w_factor*front_camera.output_size.h * scale);
+    int32_t top_left_horizontal = (0.5f * front_camera.output_size.w * (1.f - w_factor)) * scale;
+    int32_t top_right_horizontal = top_left_horizontal + (w_factor*front_camera.output_size.w * scale);
 
     // Vertical Region of Interest
-    int32_t top_left_vertical = (0.5f * front_camera.output_size.w * (1.f - h_factor)) * scale;
-    int32_t bottom_left_vertical = top_left_vertical + (h_factor*front_camera.output_size.w * scale);
+    int32_t top_left_vertical = (0.5f * front_camera.output_size.h * (1.f - h_factor)) * scale;
+    int32_t bottom_left_vertical = top_left_vertical + (h_factor*front_camera.output_size.h * scale);
 
     int32_t i;
     int32_t filteredCount = 0;
@@ -119,10 +118,10 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
     }
 
     if (n_samples == 0) {
-        // go through all possible lines:
+        // Go through all possible lines:
         for (i = 0; i < count; i++) {
             for (j = i + 1; j < count; j++) {
-                // distance in previous image:
+                // Distance in previous image:
                 dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
                 dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
                 distance_1 = sqrtf(dx * dx + dy * dy);
@@ -131,7 +130,7 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
                     continue;
                 }
 
-                // distance in current image:
+                // Distance in current image:
                 dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
                 dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
                 distance_2 = sqrtf(dx * dx + dy * dy);
@@ -140,18 +139,19 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
                 used_samples++;
             }
         }
-    } else {
-        // take random samples:
+    } else { 
+        //// RANDOM CONSENSUS METHOD ////
+        // Take random samples:
         for (uint16_t sample = 0; sample < n_samples; sample++) {
-            // take two random indices:
+            // Take two random indices:
             i = rand() % count;
             j = rand() % count;
-            // ensure it is not the same index:
+            // Ensure it is not the same index:
             while (i == j) {
                 j = rand() % count;
             }
 
-            // distance in previous image:
+            // Distance in previous image:
             dx = (float)vectors[i].pos.x - (float)vectors[j].pos.x;
             dy = (float)vectors[i].pos.y - (float)vectors[j].pos.y;
             distance_1 = sqrtf(dx * dx + dy * dy);
@@ -160,7 +160,7 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
                 continue;
             }
 
-            // distance in current image:
+            // Distance in current image:
             dx = (float)vectors[i].pos.x + (float)vectors[i].flow_x - (float)vectors[j].pos.x - (float)vectors[j].flow_x;
             dy = (float)vectors[i].pos.y + (float)vectors[i].flow_y - (float)vectors[j].pos.y - (float)vectors[j].flow_y;
             distance_2 = sqrtf(dx * dx + dy * dy);
@@ -170,6 +170,7 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
         }
     }
 
+    // Return 0 if used_samples = 0 (to avoid division by 0)
     if (used_samples < 1){
         return 0.f;
     }
@@ -187,14 +188,14 @@ float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
     divs_sum = moving_average_filter(divs_sum, divs_sum_old);
     divs_sum_old = divs_sum;
 
-    // return the calculated filtered divergence:
+    // Return the calculated filtered divergence:
     return divs_sum;
 }
 
 double get_difference_divergence(struct flow_t *vectors, int count, int n_samples)
 {
-    // computes the difference between the normalised divergence on the left and right sides of the image
-    // the two normalisations are:
+    // Computes the difference between the normalised divergence on the left and right sides of the image
+    // The two normalisations are:
     // 1. normalise for the linear expansion of optic flow vectors situated further from the center of the image
     // 2. normalise for the amount of optic flow vectors on each half of the image
 
@@ -211,8 +212,8 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
     uint32_t used_samples_right = 0;
     double dx, dy;
     int32_t i;
-    int32_t image_width_half = (front_camera.output_size.h/2) * 100; // Width of captured image (maybe needs a header file)
-    int32_t image_height_half = (front_camera.output_size.w/2) * 100;
+    int32_t image_width_half = (front_camera.output_size.w/2) * 100; // Width of captured image (maybe needs a header file)
+    int32_t image_height_half = (front_camera.output_size.h/2) * 100;
 
     // apply the random consensus method if n_samples != 0
     // TODO: apply random consensus method
@@ -221,7 +222,7 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
         dx = (double)vectors[i].flow_x;
         dy = (double)vectors[i].flow_y;
 
-        // this is the linear normalisation coefficient
+        // This is the linear normalisation coefficient
         coeff_norm = sqrtf(
                 ((double) vectors[i].pos.x - image_width_half) * ((double) vectors[i].pos.x - image_width_half) +
                 ((double) vectors[i].pos.y - image_height_half) * ((double) vectors[i].pos.y - image_height_half));
@@ -244,13 +245,11 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
         return 0.f;
     }
 
-    // normalise the two divergences with the number of optic flow vectors in the corresponding part of the image
+    // Normalise the two divergences with the number of optic flow vectors in the corresponding part of the image (normalisation 2)
     divs_sum_left_mean = divs_sum_left / used_samples_left;
     divs_sum_right_mean = divs_sum_right / used_samples_right;
 
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
-
-    // PRINT("divs_sum_left_mean: %f; divs_sum_right_mean: %f; divs_sum_difference: %f", divs_sum_left_mean, divs_sum_right_mean, divs_sum_difference);
 
     // If this is the first time the function is called, set the old value to the new value
     if (F_FIRST_TIME_MOVING_FILTER) {
@@ -261,7 +260,6 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
     // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
     divs_sum_difference = moving_average_filter(divs_sum_difference, divs_sum_difference_old);
     divs_sum_difference_old = divs_sum_difference;
-
 
     return divs_sum_difference;
 }

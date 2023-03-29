@@ -404,7 +404,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// assume max is mid segment
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
-    float detectionTolerance = 2.0f; // 1.95f
+    float detectionTolerance = 2.1f; // 1.95f
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t minValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 1;
@@ -437,8 +437,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         maxIndex = 3; // corresponds to 404 direction value (other than 0, 1 and 2)
     }
 
-    PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
-    PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+    // PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+    // PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
     // set output variables
     if (maxIndex == 0) {
         *direction = -1;
@@ -450,8 +450,6 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         *direction = 404; // error turn back
     }
     *floor_color_count_img_segment = maxValue;
-
-
 
 
     return cnt_orange;

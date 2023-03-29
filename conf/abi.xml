@@ -53,7 +53,7 @@
       <field name="gps_s" type="struct GpsState *"/>
     </message>
 
-    <message name="OPTICAL_FLOW" id="11">
+   <message name="OPTICAL_FLOW" id="11">
       <field name="stamp" type="uint32_t" unit="us"/>
       <field name="flow_x" type="int32_t">Flow in x direction from the camera (in subpixels)</field>
       <field name="flow_y" type="int32_t">Flow in y direction from the camera (in subpixels)</field>
@@ -186,7 +186,7 @@
       <field name="pixel_y"      type="int16_t">Center pixel Y</field>
       <field name="pixel_width"  type="int16_t">Width in pixels</field>
       <field name="pixel_height" type="int16_t">Height in pixels</field>
-      <field name="quality"      type="int32_t">Detection quality</field>
+      <field name="quality"      type="int32_t">Detection quality</field> 
       <field name="direction" type="int32_t">Recommended heading from floor detection based on image segmentation </field>
       <field name="floor_color_count_img_segment" type="int32_t">Green count per safe heading image segment </field>
       <field name="extra"        type="int16_t">Extra field for options like detector source etc</field>

@@ -52,6 +52,7 @@
 #else
 #define VERBOSE_PRINT(...)
 #endif
+FILE *Green_Distance_Count;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     ////// DEFINE SETTINGS AND VARIABLES //////
@@ -150,6 +151,12 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
   // PRINT("[ORANGE] color_count: %d", color_count);
   safe_heading_green = direction;
   // PRINT("RAN CB ORANGE");
+  if (SPEED_LOCAL_COORD > 0.01) {
+      Green_Distance_Count = fopen("green_dist_count.dat", "a+");
+      fprintf(Green_Distance_Count, "%d \n",  (color_count, floor_color_count_img_segment));
+      fclose(Green_Distance_Count);
+  }
+
 }
 
 //// Receive ABI message from opticflow_module.c, where the divergence value is of interest

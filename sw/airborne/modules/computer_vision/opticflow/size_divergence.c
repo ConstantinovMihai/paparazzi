@@ -32,6 +32,7 @@
 #include "firmwares/rotorcraft/navigation.h"
 #include "size_divergence.h"
 #include <stdlib.h>
+#include <math.h>
 #define PRINT(string,...) fprintf(stderr, "[size_divergence->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
 float moving_average_filter_div_diff(float current_value, float old_value);
@@ -289,6 +290,12 @@ double get_difference_divergence(struct flow_t *vectors, int count, int subpixel
 //    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
 //    divs_sum_difference = moving_average_filter_div_diff(divs_sum_difference, divs_sum_difference_old);
 //    divs_sum_difference_old = divs_sum_difference;
+
+    //if (fabs(divs_sum_difference) > 0.1) {
+    //    PRINT(" STOP: %lf\n", divs_sum_difference);
+    //} else {
+    //    PRINT("FINE: %lf\n", divs_sum_difference);
+    //}
 
     return divs_sum_difference;
 }

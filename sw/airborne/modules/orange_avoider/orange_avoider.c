@@ -220,11 +220,16 @@ void orange_avoider_periodic(void)
     obstacle_free_confidence_opticalflow -= 1; // Be more cautious with positive obstacle detections
   }
 
+  struct FloatRates *rates= stateGetBodyRates_f();
+  float rate = rates->p; // yaw rate
+
     // Div difference
   if (fabs(div_diff) < divergence_difference_threshold) {
     obstacle_free_confidence_div_diff++;
-  } else {
-    obstacle_free_confidence_div_diff -= 1; // Be more cautious with positive obstacle detections
+  } else if (r < 0.01) {
+    // only update confidence when the drone is not rotating
+    // Be more cautious with positive obstacle detections
+    obstacle_free_confidence_div_diff -= 1;
   }
 
   // Bound obstacle_free_confidence_orange

@@ -1,6 +1,6 @@
 # README: FlyingStars (Group 5, 2022-2023)
 
-![Happy Kevin](https://github.com/ConstanstinovMihai/paparazzi/blob/FlyingStars_FINAL/assets/flyingstars.jpeg?raw=true)
+![Happy Kevin](https://raw.githubusercontent.com/ConstantinovMihai/paparazzi/FlyingStars_FINAL/assets/flyingstars.jpeg)
 
 ## Introduction
 This repository contains the work of **FlyingStars** (Group 5) for the course **AE4317 Autonomous Flight of Micro Air Vehicles**. This branch ([**FlyingStars_FINAL**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_FINAL)) contains the final implementation of the code that we used during the competition, and runs specifically on the drone.

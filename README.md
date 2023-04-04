@@ -1,5 +1,23 @@
 # MAIN README
 
+AE4317 2023 Group 5 Code variant
+================================
+
+This fork contains the code base used by Group 5 during the AE4317 Autonomous Flight of Micro Aerial Vehicles course offered at TU Delft in 2023.
+It contains the contribution we brought to paparazzi project, namely the code used in the competition. The modified navigation, which fuses different computer vision algorithms, such as a floor detector, and size divergence and difference divergence based on sparse optic flow obtained from FAST and Lukas-Kanade algorithms.
+
+The files of interest can be found under:
+
+Navigation:
+
+Floor detection:
+
+Optic flow algorithms:
+
+Optic flow vectors calculations:
+
+Image cropping:
+
 Paparazzi UAS
 =============
 [![Build Status](https://semaphoreci.com/api/v1/paparazziuav/paparazzi/branches/master/shields_badge.svg)](https://semaphoreci.com/paparazziuav/paparazzi) [![Gitter chat](https://badges.gitter.im/paparazzi/discuss.svg)](https://gitter.im/paparazzi/discuss)

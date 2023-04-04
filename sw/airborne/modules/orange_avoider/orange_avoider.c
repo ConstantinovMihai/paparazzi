@@ -297,40 +297,6 @@ void orange_avoider_periodic(void)
           moveWaypointForward(WP_GOAL, moveDistance);
       }
       break;
-    case SEARCH_SAFE_HEADING:
-      // Stop
-      guidance_h_set_body_vel(0, 0);
-
-      // Check if we were previously out of bounds and fix the direction to CW if so
-      if (F_WAS_OUT_OF_BOUNDS == true) {
-        random_direction = 0;
-        F_WAS_OUT_OF_BOUNDS = false;
-        F_ALREADY_SEARCHING = true;
-      }
-      /////////////// ORANGE AVOIDER ///////////////
-      // Check if we were already searching for a safe heading for orange avoider
-      if (F_ALREADY_SEARCHING == false) {
-        // If not, set the search_safe_heading flag
-        F_ALREADY_SEARCHING = true;
-        // Randomly decide whether to turn CW or CCW
-        random_direction = rand() % 2;
-      }
-
-      // Increment the counter for the number of times the drone has been in the safe state
-      C_ROBUSTNESS++;
-      // PRINT("ROBUSTNESS (SAFE): %d \n", C_ROBUSTNESS);
-
-      // If next state is to search for a safe heading, set the heading increment
-      if (navigation_state == SEARCH_SAFE_HEADING) {
-        // if (C_ROBUSTNESS < 1) {
-          // navigation_state = SAFE;
-        //} 
-        // else {
-          // PRINT("Robustness exceeded 10, going to search safe heading called by %d \n", search_safe_heading_state);
-          chooseRandomIncrementAvoidance();
-          // C_ROBUSTNESS = 0;
-        // }
-      }
 
       break;
     case SEARCH_SAFE_HEADING:
@@ -405,10 +371,7 @@ void orange_avoider_periodic(void)
       }
       
       break; 
-    case RETURN:
-      increase_nav_heading(90.f);                       // Turn around by 180 [deg] if unsure about divergence
-      navigation_state = SAFE;
-      break;
+
     case TURN_AROUND:
       // Stop
       guidance_h_set_body_vel(0, 0);

@@ -19,3 +19,21 @@ In the end, we had five working versions with different combinations of methods 
 - [**FlyingStars_C**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_C): Orange Detection + Floor Colour Detection + Plant Colour Detection + Divergence Size
 - [**FlyingStars_C_SimVersion**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_C_SimVersion): Orange Detection + Floor Colour Detection + Plant Colour Detection + Divergence Size (tuned for simulator)
 - [**FlyingStars_D**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_D): Orange Detection + Floor Colour Detection + Divergence Size + Divergence Difference
+
+## Instructions to run (on Bebop 1)
+First, please clean and remake Paparazzi in order to ensure that the correct header files are generated.
+
+```console
+$ make clean && make
+```
+
+Then, you can run the following to bring up the Paparazzi Configuration Chooser.
+```console
+$ ./start.py
+```
+
+Choose `userconf/tudelft/course_conf.xml` for the Conf, and `userconf/tudelft/course_control_panel.xml` for the Controlpanel.
+
+Then continue to Paparazzi by clicking on **Launch Paparazzi with selected configuration**.
+
+You will then be presented with the Paparazzi Center, where you can proceed to Clean and Build the code for the Bebop 1 drone.

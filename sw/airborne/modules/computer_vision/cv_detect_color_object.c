@@ -338,7 +338,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     int32_t mid_segment = 1;
     int32_t cnt_green = 0;
     int32_t cnt_green_plant = 0;
-    float cropped_image_factor = 0.1f;
+    float cropped_image_factor = 0.15f;
     float cropped_image_factor_plant = 0.2f;
     
     // define settings
@@ -490,13 +490,13 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
     /// assume max is mid segment
     /// check if it's actually the mid segment and if it's above the threshold
     /// get the direction with max value above threshold ig you cant find return 404
-    float detectionTolerance = 2.0f; // 1.95f
-    int32_t plant_greenThreshold = 750;
+    float detectionTolerance = 2.0f;
+    int32_t plant_greenThreshold = 2100;
     int32_t maxValue = color_count_per_img_segment_arr[mid_segment];
     int32_t minValue = color_count_per_img_segment_arr[mid_segment];
     int32_t maxIndex = 1;
     bool atLeastOneAboveTh = false;
-    int32_t margin_between_min_max = 60;
+    int32_t margin_between_min_max = 50;
     bool plant_detection;
     bool above_th_arr[img_segments];
     // int32_t total_plant_green = 0;
@@ -537,9 +537,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t *p_xc, int32_t *p_yc,
         maxIndex = 3;
     }
 
-    PRINT("[PLANT] Colour count: %ld; Threshold: %d; Detection: %d \n", color_count_per_img_segment_arr_plant[mid_segment], plant_greenThreshold, plant_detection);
-    //PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
-   // PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
+    // PRINT("[PLANT] Colour count: %ld; Threshold: %d; Detection: %d \n", color_count_per_img_segment_arr_plant[mid_segment], plant_greenThreshold, plant_detection);
+    PRINT("S-1 %ld, S0 %ld, S1 %ld \n", color_count_per_img_segment_arr[0], color_count_per_img_segment_arr[1], color_count_per_img_segment_arr[2]);
+   PRINT("TH-1 %ld, TH0 %ld, TH1 %ld \n", floor_threshold_per_segment_arr[0], floor_threshold_per_segment_arr[1], floor_threshold_per_segment_arr[2]);
     // set output variables
     if (maxIndex == 0) {
         *direction = -1;

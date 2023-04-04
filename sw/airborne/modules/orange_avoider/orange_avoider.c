@@ -226,7 +226,7 @@ void orange_avoider_periodic(void)
     // Div difference
   if (fabs(div_diff) < divergence_difference_threshold) {
     obstacle_free_confidence_div_diff++;
-  } else if (r < 0.01) {
+  } else if (rate < 0.01) {
     // only update confidence when the drone is not rotating
     // Be more cautious with positive obstacle detections
     obstacle_free_confidence_div_diff -= 1;

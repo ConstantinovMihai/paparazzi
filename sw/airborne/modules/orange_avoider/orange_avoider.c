@@ -21,16 +21,15 @@
 /**
  * @file "modules/orange_avoider/orange_avoider.c"
  * @author Roland Meertens
- * @edit by Group 5 for the course (AE4317) Autonomous Flight of Micro Air Vehicles 
+ * @edit by Group 5 (2022-2023) for the course (AE4317) Autonomous Flight of Micro Air Vehicles 
  * @year 2022/2023  
  *
  * This module is used in combination with a color filter (cv_detect_color_object.c), optic flow (opticflow_module.c, 
  * opticflow_calculator.c, and size_divergence.c), and the navigation mode of the autopilot.
  *
- * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
- * (given by color_count_frac) we assume that there is an obstacle and we turn. The same principle is applied but then 
- * using the divergence difference value between left and right of image (div_diff) and the divergence threshold (divergence_threshold).
- *
+ * The main avoidance strategy is to detect the colour pixels of the green floor and avoid obstacles using that (cv_detect_color_object.c). 
+ * This is supplemented with the detection of orange colour pixels (cv_detect_color_object.c), the detection of green colour pixels of 
+ * the plant (cv_detect_color_object.c), and the divergence size (size_divergence.c and opticflow_calculator.c).
  */
 
 #include "modules/orange_avoider/orange_avoider.h"
@@ -46,7 +45,9 @@
 
 #define ORANGE_AVOIDER_VERBOSE TRUE
 
+// Print function for debugging
 #define PRINT(string,...) fprintf(stderr, "[orange_avoider->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+
 #if ORANGE_AVOIDER_VERBOSE
 #define VERBOSE_PRINT PRINT
 #else
@@ -56,14 +57,19 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     ////// DEFINE SETTINGS AND VARIABLES //////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////// BUILT-IN FUNCTIONS DEFINITION //////
+////// FUNCTIONS DEFINITION //////
 static uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 static uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters);
 static uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 static uint8_t increase_nav_heading(float incrementDegrees);
 uint8_t chooseRandomIncrementAvoidance(void);
 
-////// STATES AND VARIABLE DEFINITION AND INITIALISATION //////
+////// STATES AND VARIABLE DEFINITIONS AND INITIALISATION //////
+// State machine:
+// SAFE: Continue flying until obstacle detected 
+// SEARCH_SAFE_HEADING: Obstacle detected, search for safe heading until it is safe to fly again
+// TURN_AROUND: Obstacle detected, turn around until it is safe to fly again
+// OUT_OF_BOUNDS: Out of bounds, turn until in bounds again
 enum navigation_state_t {
   SAFE,
   SEARCH_SAFE_HEADING,
@@ -83,6 +89,7 @@ enum turn_around_state_t {
   DIV_SIZE,
 };
 
+// Initialising the state machine, the state is set to SEARCH_SAFE_HEADING, ORANGE, and GREEN
 enum navigation_state_t navigation_state = SEARCH_SAFE_HEADING;
 enum search_safe_heading_state_t search_safe_heading_state = ORANGE;
 enum turn_around_state_t turn_around_state = GREEN;
@@ -99,30 +106,26 @@ float div_size = 0;                                      // Divergence size for 
 float divergence_threshold = 0.065f;                     // Threshold for the divergence size 
 
 int16_t obstacle_free_confidence_orange = 0;             // Measure of how certain we are that the way ahead is safe for orange detection
-int16_t obstacle_free_confidence_floor = 0;
-int16_t obstacle_free_confidence_div_size = 0;        // Measure of how certain we are that the way ahead is safe for divergence size detection
+int16_t obstacle_free_confidence_floor = 0;              // Measure of how certain we are that the way ahead is safe for floor detection
+int16_t obstacle_free_confidence_div_size = 0;           // Measure of how certain we are that the way ahead is safe for divergence size detection
 const int16_t max_trajectory_confidence_orange = 5;      // Number of consecutive negative object detections to be sure we are obstacle free for orange detection
-const int16_t max_trajectory_confidence_floor = 5;      // Number of consecutive negative object detections to be sure we are obstacle free for floor detection
+const int16_t max_trajectory_confidence_floor = 5;       // Number of consecutive negative object detections to be sure we are obstacle free for floor detection
 const int16_t max_trajectory_confidence_opticalflow = 5; // Number of consecutive negative object detections to be sure we are obstacle free for divergence size detection
 
 // Distances:
 float maxDistance = 0.5;                                 // Max waypoint displacement [m]
-float moveDistance = 0.0f;                                // Waypoint displacement [m] 
+float moveDistance = 0.0f;                               // Waypoint displacement [m] 
 
 // Heading:
 const float heading_magnitude = 5.f;                     // Heading angle magnitude [deg]
 float heading_increment = 1.f * heading_magnitude;       // Heading angle increment [deg]
-const float heading_magnitude_OOB = 15.f;                 // OUT_OF_BOUNDS heading angle magnitude [deg]
+const float heading_magnitude_OOB = 15.f;                // OUT_OF_BOUNDS heading angle magnitude [deg]
 float heading_increment_OOB = 1.f * heading_magnitude;   // OUT_OF_BOUNDS heading angle increment [deg]
-const float heading_magnitude_TA = 30.f;                  // TURN_AROUND heading angle magnitude [deg]
+const float heading_magnitude_TA = 30.f;                 // TURN_AROUND heading angle magnitude [deg]
 float heading_increment_TA = 1.f * heading_magnitude_TA; // TURN_AROUND heading angle increment [deg]
 
-// COUNTERS:
-int16_t C_DIV_SIZE_MAX_HEADING = 0; 
-
-
-// Debugging:
-enum navigation_state_t previous_state = SAFE;           // previous state
+// Counters:
+int16_t C_DIV_SIZE_MAX_HEADING = 0;                      // Counter to allow for a max heading angle of 90 [deg] for divergence size
 
 /*
  * This next section defines an ABI messaging event (http://wiki.paparazziuav.org/wiki/ABI), necessary
@@ -133,7 +136,7 @@ enum navigation_state_t previous_state = SAFE;           // previous state
  */
 
 ////// ABI MESSAGES //////
-//// Receive ABI message from cv_detect_color_object.c, where the quality value is of interest
+//// Receive ABI message from cv_detect_color_object.c, where the quality (orange detection) and safe heading direction  (floor colour detection) values are of interest
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
 #endif
@@ -148,12 +151,11 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int32_t __attribute__((unused)) floor_color_count_img_segment,
                                int16_t __attribute__((unused)) extra)
 {
-  color_count = quality;
-  safe_heading_green = direction;
+  color_count = quality;           // Orange color count from color filter for obstacle detection  
+  safe_heading_green = direction;  // Safe heading for green detection received from cv_detect_color_object.c
 }
 
-
-//// Receive ABI message from opticflow_module.c, where the divergence value is of interest
+//// Receive ABI message from opticflow_module.c, where the divergence size value is of interest
 #ifndef OPTICAL_FLOW_ID
 #define OPTICAL_FLOW_ID ABI_BROADCAST
 #endif
@@ -167,7 +169,7 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             float __attribute__((unused)) quality, 
                             float size_divergence) 
 {
-  div_size = size_divergence;;
+  div_size = size_divergence;      // Divergence size for obstacle detection
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,7 +186,7 @@ void orange_avoider_init(void)
   //// Bind the colorfilter callbacks to receive the color filter outputs:
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
-  //// Bind the optical flow callbacks to receive the divergence values:
+  //// Bind the optical flow callbacks to receive the divergence size values:
   AbiBindMsgOPTICAL_FLOW(OPTICAL_FLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
@@ -228,17 +230,18 @@ void orange_avoider_periodic(void)
 
   ////// BIND OBSTACLE FREE CONFIDENCE VALUES TO A RANGE //////
   // Orange detection:
-  Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange); // Bound obstacle_free_confidence_orange
+  Bound(obstacle_free_confidence_orange, 0, max_trajectory_confidence_orange);          // Bound obstacle_free_confidence_orange
 
   // Floor detection:
-  Bound(obstacle_free_confidence_floor, 0, max_trajectory_confidence_floor); // Bound obstacle_free_confidence_floor
+  Bound(obstacle_free_confidence_floor, 0, max_trajectory_confidence_floor);            // Bound obstacle_free_confidence_floor
 
   // Divergence size detection:
-  Bound(obstacle_free_confidence_div_size, 0, max_trajectory_confidence_opticalflow); // Bound obstacle_free_confidence_div_size
+  Bound(obstacle_free_confidence_div_size, 0, max_trajectory_confidence_opticalflow);   // Bound obstacle_free_confidence_div_size
 
   ////// PRINT DETECTION VALUES //////
   // Orange detection:
-  // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); // Print obstacle free confidence for orange and visual detection pixel colour values
+  // Print obstacle free confidence for orange and visual detection pixel colour values
+  // PRINT("[ORANGE] Obstacle Free Confidence: %d; Orange Count: %d; Orange Threshold: %d \n", obstacle_free_confidence_orange, color_count, color_count_threshold); 
   
   // Floor/Green detection:
   // PRINT("[GREEN] Obstacle Free Confidence: %d; Safe Heading: %d \n", obstacle_free_confidence_floor, safe_heading_green); // Print safe heading green
@@ -246,21 +249,12 @@ void orange_avoider_periodic(void)
   // Divergence size detection:
   // PRINT("[DIV_SIZE] Obstacle Free Confidence: %d; Size: %lf; Threshold: %f \n", obstacle_free_confidence_div_size, div_size, divergence_threshold); // Print div_size
 
-  // States:
-  // if (previous_state != navigation_state) {
-  //   PRINT("[STATE] State: %d \n", navigation_state); // Print current navigation state
-  //   previous_state = navigation_state;
-  // }
-  // PRINT("[STATE] State: %d \n", navigation_state); // Print current navigation state
-
-
   ////// SETTING VELOCITY/MOVEMENT //////
-  //// Distance waypoint moves ahead of drone -> compares both orange avoider and divergence size confidences followed by the maxDistance comparison and takes the min value out of all of them  
-  // Constant velocity:
-  // moveDistance = maxDistance;
-  
+  // The distance the waypoint moves ahead of drone -> compares both orange detection and floor detection confidences followed by a comparison with divergence size detection, which is then compared to the 
+  // maxDistance and it takes the min value out of all of them  
   float moveDistance_temp = fminf(0.2f * obstacle_free_confidence_orange, 0.2f * obstacle_free_confidence_floor);
   float moveDistance_temp2 = fminf(moveDistance_temp, 0.2f * obstacle_free_confidence_div_size);
+  
   moveDistance = fminf(maxDistance, moveDistance_temp2);
 
   ////// NAVIGATION STATE MACHINE //////
@@ -272,7 +266,7 @@ void orange_avoider_periodic(void)
       // OUT OF BOUNDS CHECK:
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) 
       {
-        navigation_state = OUT_OF_BOUNDS;
+        navigation_state = OUT_OF_BOUNDS; // If the waypoint is out of bounds, then change state to out of bounds
       } 
       
       // ORANGE OBSTACLE DETECTION:
@@ -281,37 +275,43 @@ void orange_avoider_periodic(void)
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = ORANGE;
       } 
+
       // FLOOR OBSTACLE DETECTION:
       else if (abs(safe_heading_green) == 1) {
         navigation_state = SEARCH_SAFE_HEADING;
         search_safe_heading_state = GREEN;
       } 
+      
       // FLOOR "ERROR 404" (Does not understand what is happening so turn around):
       else if (safe_heading_green == 404) 
       {
         navigation_state = TURN_AROUND;
         turn_around_state = GREEN_TURN_AROUND;
       } 
+
       // DIVERGENCE SIZE DETECTION:
       else if (obstacle_free_confidence_div_size == 0) 
       {
         navigation_state = TURN_AROUND;
         turn_around_state = DIV_SIZE;
       } 
+      
       // IF NO ABOVE CONDITION MET -> Move GOAL waypoint forwards
       else 
       {
         moveWaypointForward(WP_GOAL, moveDistance);
       }
+      
       // If next state is to search for a safe heading, set the heading increment to random (only for orange detections)
-      if (navigation_state == SEARCH_SAFE_HEADING) {
-          chooseRandomIncrementAvoidance();
+      if (navigation_state == SEARCH_SAFE_HEADING) 
+      {
+        chooseRandomIncrementAvoidance();
       }
+
       break;
+    
+    // Search for a safe heading to move to (either orange or floor detection)
     case SEARCH_SAFE_HEADING:
-      if (previous_state != navigation_state) {
-        PRINT("[STATE] Search Safe Heading [CALLED BY] %d", search_safe_heading_state);
-      }
       // Stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -325,13 +325,16 @@ void orange_avoider_periodic(void)
 
           // If confident there is no obstacle -> set navigation state to SAFE
           // If not confident and an obstacle is still detected, keep on turning
-          if (obstacle_free_confidence_orange >= 3){
+          if (obstacle_free_confidence_orange >= 3)
+          {
             navigation_state = SAFE;
-          } else {
+          } else 
+          {
             increase_nav_heading(heading_increment);
           }
 
           break;
+        
         //// Floor/No-Green detection ////
         case GREEN:
         // Stop
@@ -352,16 +355,14 @@ void orange_avoider_periodic(void)
         break;
       }
       break;
+    // Turn around if "ERROR 404" or divergence size detection
     case TURN_AROUND:
-    if (previous_state != navigation_state) {
-      PRINT("[STATE] Turn Around [CALLED BY] %d", turn_around_state);
-    }
-
       // Stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
       
       switch (turn_around_state) {
+        
         //// Floor/No-Green detection -> "ERROR 404" ////
         case GREEN_TURN_AROUND:
           // Stop
@@ -378,11 +379,12 @@ void orange_avoider_periodic(void)
           }
 
         break;
+
         //// Divergence Size Detection ////
         case DIV_SIZE:
-        // Stop
-        waypoint_move_here_2d(WP_GOAL);
-        waypoint_move_here_2d(WP_TRAJECTORY);
+          // Stop
+          waypoint_move_here_2d(WP_GOAL);
+          waypoint_move_here_2d(WP_TRAJECTORY);
 
           // Turn CW
           increase_nav_heading(heading_increment_TA);
@@ -399,10 +401,13 @@ void orange_avoider_periodic(void)
           }
         
         break;
+        
       default:
         break;
       }
       break;
+    
+    // Out of bounds detection
     case OUT_OF_BOUNDS:
       // Stop
       waypoint_move_here_2d(WP_GOAL);
@@ -414,13 +419,14 @@ void orange_avoider_periodic(void)
       // Move waypoint forward
       moveWaypointForward(WP_TRAJECTORY, 2.1f);
 
+      // If waypoint is back in bounds, set navigation state to SAFE
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         // Add offset to head back into arena
         increase_nav_heading(heading_increment_OOB);
         // Set confidence to 0
         obstacle_free_confidence_orange = 0;
         obstacle_free_confidence_div_size = 0;
-        // Assume there is an obstacle to be safe (just in case)
+        // Set navigation state to SAFE
         navigation_state = SAFE;
       }
       break;
@@ -445,7 +451,6 @@ uint8_t increase_nav_heading(float incrementDegrees)
   // for performance reasons the navigation variables are stored and processed in Binary Fixed-Point format
   nav_heading = ANGLE_BFP_OF_REAL(new_heading);
 
-  // VERBOSE_PRINT("Increasing heading to %f\n", DegOfRad(new_heading));
   return false;
 }
 
@@ -472,9 +477,7 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
   // Now determine where to place the waypoint you want to go to
   new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
   new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
-  // VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,	
-  //               POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
-  //               stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
+  
   return false;
 }
 
@@ -484,7 +487,6 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
  */
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 {
-  //VERBOSE_PRINT("Moving waypoint %d to x:%f y:%f\n", waypoint, POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y));
   waypoint_move_xy_i(waypoint, new_coor->x, new_coor->y);
   return false;
 }
@@ -496,11 +498,13 @@ uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 uint8_t chooseRandomIncrementAvoidance()
 {
   // Randomly choose CW or CCW avoiding direction
-  if (rand() % 2 == 0) {
+  if (rand() % 2 == 0) 
+  {
     heading_increment = 1.f * heading_magnitude;
-  } else {
+  } else 
+  {
     heading_increment = -1.f * heading_magnitude;
   }
-  // PRINT("New heading increment: %f\n", heading_increment);
+  
   return false;
 }

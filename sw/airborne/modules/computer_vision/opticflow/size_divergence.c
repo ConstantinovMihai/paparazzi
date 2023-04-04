@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #define PRINT(string,...) fprintf(stderr, "[size_divergence->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
+// Define functions
 float moving_average_filter(float current_value, float old_value);
 bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x2, int32_t y1, int32_t y2);
 
@@ -43,7 +44,6 @@ bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x
  * @param[in] count      The number of optical flow vectors 
  * @return filtered optic flow vectors
 */
-
 bool vectorInROI(uint32_t vectorPosX, uint32_t vectorPosY, int32_t x1, int32_t x2, int32_t y1, int32_t y2) {
     
     if (vectorPosX >= (uint32_t)x1 && vectorPosX <= (uint32_t)x2 && vectorPosY >= (uint32_t)y1 && vectorPosY <= (uint32_t)y2) {
@@ -100,6 +100,7 @@ int filter_vectors(struct flow_t *original_vectors, int count, struct flow_t *fi
 float divs_sum_difference_old = 0.f;
 float divs_sum_old = 0.f;
 bool F_FIRST_TIME_MOVING_FILTER = true;
+
 
 float get_size_divergence(struct flow_t *vectors, int count, int n_samples)
 {
@@ -200,23 +201,21 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
     // 2. normalise for the amount of optic flow vectors on each half of the image
 
     double flow_norm;
-    double coeff_norm;                // normalisation coefficient
+    double coeff_norm;                // Normalisation coefficient
 
     double divs_sum_left = 0.f;       // Divergence in left part of image
     double divs_sum_left_mean = 0.f;  // Mean divergence in left part of image
     double divs_sum_right = 0.f;      // Divergence in right part of image
     double divs_sum_right_mean = 0.f; // Mean divergence in right part of image
     double divs_sum_difference = 0.f; // Difference in divergence used to determine which side has the larger divergence
-    uint32_t used_samples = 0;
-    uint32_t used_samples_left = 0;
-    uint32_t used_samples_right = 0;
-    double dx, dy;
-    int32_t i;
-    int32_t image_width_half = (front_camera.output_size.w/2) * 100; // Width of captured image (maybe needs a header file)
-    int32_t image_height_half = (front_camera.output_size.h/2) * 100;
+    uint32_t used_samples = 0;        // Number of used samples
+    uint32_t used_samples_left = 0;   // Number of used samples in left part of image
+    uint32_t used_samples_right = 0;  // Number of used samples in right part of image
+    double dx, dy;                    // Distance in previous image
+    int32_t i;                        // Index of vector
+    int32_t image_width_half = (front_camera.output_size.w/2) * 100;  // Width of captured image
+    int32_t image_height_half = (front_camera.output_size.h/2) * 100; // Height of captured image
 
-    // apply the random consensus method if n_samples != 0
-    // TODO: apply random consensus method
     for (i = 0; i < count; i++) {
         // Distance in previous image:
         dx = (double)vectors[i].flow_x;
@@ -241,14 +240,16 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
         used_samples++;
     }
 
-    if (used_samples_left < 1 || used_samples_right < 1){
+    // Return 0 if used_samples_left = 0 or used_samples_right = 0 (to avoid division by 0)
+    if (used_samples_left < 1 || used_samples_right < 1) {
         return 0.f;
     }
 
     // Normalise the two divergences with the number of optic flow vectors in the corresponding part of the image (normalisation 2)
     divs_sum_left_mean = divs_sum_left / used_samples_left;
     divs_sum_right_mean = divs_sum_right / used_samples_right;
-
+    
+    // Calculate the difference between the two divergence sums
     divs_sum_difference = divs_sum_left_mean - divs_sum_right_mean;
 
     // If this is the first time the function is called, set the old value to the new value
@@ -257,13 +258,14 @@ double get_difference_divergence(struct flow_t *vectors, int count, int n_sample
         F_FIRST_TIME_MOVING_FILTER = false;
     }
 
-    // Average out divs_sum_difference values using a moving average filter, x is new value, y is old value
+    // Average out divs_sum_difference values using a moving average filter 
     divs_sum_difference = moving_average_filter(divs_sum_difference, divs_sum_difference_old);
     divs_sum_difference_old = divs_sum_difference;
 
     return divs_sum_difference;
 }
 
+// Moving average filter function
 float moving_average_filter(float current_value, float old_value)
 {
     return ((0.4*current_value) + (1-0.4)*old_value);

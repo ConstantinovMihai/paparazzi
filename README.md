@@ -1,86 +1,21 @@
-# MAIN README
+# README: FlyingStars (Group 5, 2022-2023)
 
-Paparazzi UAS
-=============
-[![Build Status](https://semaphoreci.com/api/v1/paparazziuav/paparazzi/branches/master/shields_badge.svg)](https://semaphoreci.com/paparazziuav/paparazzi) [![Gitter chat](https://badges.gitter.im/paparazzi/discuss.svg)](https://gitter.im/paparazzi/discuss)
-<a href="https://scan.coverity.com/projects/paparazzi-paparazzi">
-  <img alt="Coverity Scan Build Status"
-       src="https://scan.coverity.com/projects/4928/badge.svg"/>
-</a>
+![Happy Kevin](https://github.com/kmalkow/paparazzi/blob/assets/flyingstars.jpeg?raw=true)
 
-Paparazzi is a free open source software package for Unmanned (Air) Vehicle Systems.
-For many years, the system has been used successfuly by hobbyists, universities and companies all over the world, on vehicles of various sizes (11.9g to 25kg).
-Paparazzi supports fixed wing, rotorcraft, hybrids, flapping vehicles and it is even possible to use it for boats and surface vehicles.
+## Introduction
+This repository contains the work of **FlyingStars** (Group 5) for the course **AE4317 Autonomous Flight of Micro Air Vehicles**. This branch ([**FlyingStars_FINAL**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_FINAL)) contains the final implementation of the code that we used during the competition, and runs specifically on the drone.
 
-Documentation is available here https://paparazzi-uav.readthedocs.io/en/latest/
+The main approach of our group was to detect the floor and green plants, avoid orange obstacles and detect divergence size in the CyberZoo. Based on the detections, the drone avoids the obstacles and finds the best path to continue flying.
 
-More docs is also available on the wiki http://wiki.paparazziuav.org
+In the end, we came **second!** in the competition of the academic year 2022-2023.
 
-To get in touch, subscribe to the mailing list [paparazzi-devel@nongnu.org] (http://savannah.nongnu.org/mail/?group=paparazzi), the IRC channel (freenode, #paparazzi) and Gitter (https://gitter.im/paparazzi/discuss).
+## Implementations
+Throughout our prototyping and testing, we developed many different versions of our code with methods being used in different combinations and other avenues being explored. All of this work is in this repository and can be found through the various branches.
 
-Required software
------------------
+In the end, we had five working versions with different combinations of methods as detailed below:
 
-Instructions for installation can be found on the wiki (http://wiki.paparazziuav.org/wiki/Installation).
-
-Quick start:
-
-```
-git clone https://github.com/paparazzi/paparazzi.git
-cd ./paparazzi
-./install.sh
-```
-
-
-
-For Ubuntu users, required packages are available in the [paparazzi-uav PPA] (https://launchpad.net/~paparazzi-uav/+archive/ppa),
-Debian users can use the [OpenSUSE Build Service repository] (http://download.opensuse.org/repositories/home:/flixr:/paparazzi-uav/Debian_7.0/)
-
-Debian/Ubuntu packages:
-- **paparazzi-dev** is the meta-package on which the Paparazzi software depends to compile and run the ground segment and simulator.
-- **paparazzi-jsbsim** is needed for using JSBSim as flight dynamics model for the simulator.
-
-Recommended cross compiling toolchain: https://launchpad.net/gcc-arm-embedded
-
-
-Directories quick and dirty description:
-----------------------------------------
-
-_conf_: the configuration directory (airframe, radio, ... descriptions).
-
-_data_: where to put read-only data (e.g. maps, terrain elevation files, icons)
-
-_doc_: documentation (diagrams, manual source files, ...)
-
-_sw_: software (onboard, ground station, simulation, ...)
-
-_var_: products of compilation, cache for the map tiles, ...
-
-
-Compilation and demo simulation
--------------------------------
-
-1. type "make" in the top directory to compile all the libraries and tools.
-
-2. "./paparazzi" to run the Paparazzi Center
-
-3. Select the "Bixler" aircraft in the upper-left A/C combo box.
-  Select "sim" from upper-middle "target" combo box. Click "Build".
-  When the compilation is finished, select "Simulation" in Operation tab and click "Start Session".
-
-4. In the GCS, wait about 10s for the aircraft to be in the "Holding point" navigation block.
-  Switch to the "Takeoff" block (lower-left blue airway button in the strip).
-  Takeoff with the green launch button.
-
-Uploading the embedded software
-----------------------------------
-
-1. Power the flight controller board while it is connected to the PC with the USB cable.
-
-2. From the Paparazzi center, select the "ap" target, and click "Upload".
-
-
-Flight
-------
-
-1.  From the Paparazzi Center, select the flight session and ... do the same as in simulation !
+- [**FlyingStars_A**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_A): Orange Detection + Floor Colour Detection
+- [**FlyingStars_B**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_B): Orange Detection + Floor Colour Detection + Divergence Size
+- [**FlyingStars_C**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_C): Orange Detection + Floor Colour Detection + Plant Colour Detection + Divergence Size
+- [**FlyingStars_C_SimVersion**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_C_SimVersion): Orange Detection + Floor Colour Detection + Plant Colour Detection + Divergence Size (tuned for simulator)
+- [**FlyingStars_D**](https://github.com/ConstantinovMihai/paparazzi/tree/FlyingStars_D): Orange Detection + Floor Colour Detection + Divergence Size + Divergence Difference
